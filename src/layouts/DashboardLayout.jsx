@@ -1,14 +1,16 @@
-import React from 'react'
-import Header from '../Components/Header'
-import Sidebar from '../Components/Sidebar'
-export default function DashboardLayout({ title = 'Dashboard', children }) {
-return (
-<div className="min-h-screen flex">
-<Sidebar />
-<div className="flex-1 p-6">
-<Header title={title} />
-<main className="mt-6">{children}</main>
-</div>
-</div>
-)
+import React from "react";
+import Sidebar from "../Components/Sidebar";
+
+export default function DashboardLayout({ children }) {
+  return (
+    <div className="min-h-screen flex bg-gray-100">
+      {/* Sidebar */}
+      <Sidebar />
+
+      {/* Page Content */}
+      <div className="flex-1 flex flex-col">
+        {children}
+      </div>
+    </div>
+  );
 }
