@@ -6,7 +6,7 @@ import logo from "../assets/Logo.png"
 const items = [
   { to: '/restaurants', label: 'Restaurants', icon: BuildingOffice2Icon },
   { to: '/verification', label: 'Verification', icon: ClipboardDocumentListIcon },
-  { to: '/restaurant-details', label: 'Details', icon: UserIcon },
+  // { to: '/restaurant-details', label: 'Details', icon: UserIcon },
   { to: '/suppliers', label: 'Suppliers', icon: CubeIcon },
   { to: '/inventory', label: 'Inventory', icon: PlusIcon },
   { to: '/orders', label: 'Orders', icon: ClipboardDocumentListIcon },
