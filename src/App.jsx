@@ -7,8 +7,11 @@ import LogoutPage from './Pages/auth/LogoutPage'
 import NotFound from './Pages/auth/NotFound'
 import OrdersPage from './Pages/Orders/OrdersPage'
 import Restaurants from './Pages/restaurants/restaurants'
-import Verifications from './Pages/verification/Verifications'
 import Sidebar from './Components/Sidebar'
+import Login from './Pages/auth/Login'
+import Verifications from './Pages/verification/Verifications'
+import Suppliers from './Pages/Suppliers/Suppliers'
+import Driver from './Pages/Drivers/Drivers'
 
 export default function App() {
   const location = useLocation()
@@ -34,13 +37,16 @@ export default function App() {
           <Routes>
 
             {/* Public */}
-            <Route path="/login" element={''} />
+            <Route path="/login" element={<Login/>} />
 
             {/* Protected */}
             <Route path="/" element={<ProtectedRoute><Verifications /></ProtectedRoute>} />
             <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
             <Route path="/logout" element={<ProtectedRoute><LogoutPage /></ProtectedRoute>} />
             <Route path="/restaurants" element={<ProtectedRoute><Restaurants /></ProtectedRoute>} />
+            <Route path="/verification" element={<ProtectedRoute><Verifications/></ProtectedRoute>} />
+            <Route path="/suppliers" element={<ProtectedRoute><Suppliers/></ProtectedRoute>} />
+            <Route path="/drivers" element={<ProtectedRoute><Driver/></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />

@@ -1,41 +1,102 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import API from "../Api/index";
 
 const AuthContext = createContext(null);
-const STORAGE_KEY = "ecom_admin_auth";
 
-// TEMP demo login
-const DEMO = { username: "admin", password: "admin1234" };
+const STORAGE_KEY = "ecom_admin_auth";
+const TOKEN_KEY = "token";
+
+// ⏰ TEST TIME → 2days
+const EXPIRY_TIME = 42 * 60 * 60 * 1000;
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
+  /* ----------------------------------------
+     LOAD AUTH ON APP START
+  ---------------------------------------- */
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
+    if (!stored) return;
+
+    try {
+      const data = JSON.parse(stored);
+
+      // ❌ expired on refresh
+      if (Date.now() > data.expiresAt) {
+        clearAuth();
+        return;
       }
+
+      setUser(data);
+    } catch {
+      clearAuth();
     }
   }, []);
 
+  /* ----------------------------------------
+     LIVE AUTO LOGOUT (CHECK EVERY SECOND)
+  ---------------------------------------- */
+  useEffect(() => {
+    if (!user?.expiresAt) return;
+
+    const interval = setInterval(() => {
+      if (Date.now() > user.expiresAt) {
+        logout("Session expired");
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [user]);
+
+  /* ----------------------------------------
+     LOGIN
+  ---------------------------------------- */
   const login = async ({ username, password }) => {
-    if (username === DEMO.username && password === DEMO.password) {
-      const payload = { username, token: "demo-token" };
+    try {
+      const res = await API.post("/admin/login", {
+        username,
+        password,
+      });
+
+      const payload = {
+        username,
+        role: res.data.role,
+        token: res.data.token,
+        expiresAt: Date.now() + EXPIRY_TIME,
+      };
+
+      localStorage.setItem(TOKEN_KEY, res.data.token);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+
       setUser(payload);
-      return { ok: true, data: payload };
+      return { ok: true };
+    } catch (err) {
+      return {
+        ok: false,
+        message: err.response?.data?.message || "Login failed",
+      };
     }
-    return { ok: false, message: "Invalid credentials" };
   };
 
-  const logout = () => {
+  /* ----------------------------------------
+     LOGOUT
+  ---------------------------------------- */
+  const logout = (reason) => {
+    clearAuth();
+    navigate("/login", { replace: true });
+
+    if (reason) {
+      console.warn(reason);
+    }
+  };
+
+  const clearAuth = () => {
+    localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(STORAGE_KEY);
     setUser(null);
-    navigate("/login", { replace: true });
   };
 
   return (

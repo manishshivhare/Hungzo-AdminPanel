@@ -1,19 +1,18 @@
-import axios from 'axios';
+import axios from "axios";
 
-// const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
-const API_BASE = "https://api.dhafoods.com/api";
-
-
+const API_BASE = "http://localhost:4000";
 
 const API = axios.create({
   baseURL: API_BASE,
 });
 
-// Add Authorization header to all requests
+// Attach token automatically
 API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token'); // get token from storage
+  const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
+
+export default API;
