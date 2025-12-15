@@ -16,3 +16,30 @@ API.interceptors.request.use((config) => {
 });
 
 export default API;
+
+// ================= create ADMINS ==================
+export async function createAdmin(formData) {
+  try {
+    const res = await API.post(`${API_BASE}/admin/create-admin`, formData);
+    return { ok: true, data: res.data };
+  } catch (error) {
+    console.error("Error creating admin:", error.response?.data || error.message);
+    return {
+      ok: false,
+      message: error.response?.data?.message || "Failed to create admin",
+    };
+  }
+}
+// ================= DELETE ADMIN ==================
+export async function deleteAdmin(id) {
+  try {
+    const res = await API.delete(`${API_BASE}/admin/delete/${id}`);
+    return res.data;
+  } catch (error) {
+    console.error("Error deleting admin:", error.response?.data || error.message);
+    return {
+      ok: false,
+      message: error.response?.data?.message || "Failed to delete admin",
+    };
+  }
+}

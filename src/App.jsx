@@ -12,6 +12,7 @@ import Login from './Pages/auth/Login'
 import Verifications from './Pages/verification/Verifications'
 import Suppliers from './Pages/Suppliers/Suppliers'
 import Driver from './Pages/Drivers/Drivers'
+import AddAdminPage from './Pages/Admin/AddAdminPage'
 
 export default function App() {
   const location = useLocation()
@@ -47,6 +48,7 @@ export default function App() {
             <Route path="/verification" element={<ProtectedRoute><Verifications/></ProtectedRoute>} />
             <Route path="/suppliers" element={<ProtectedRoute><Suppliers/></ProtectedRoute>} />
             <Route path="/drivers" element={<ProtectedRoute><Driver/></ProtectedRoute>} />
+            <Route path="/add-admin" element={<ProtectedRoute><AddAdminPage/></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
