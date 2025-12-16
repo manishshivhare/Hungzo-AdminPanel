@@ -13,6 +13,7 @@ import Verifications from './Pages/verification/Verifications'
 import Suppliers from './Pages/Suppliers/Suppliers'
 import Driver from './Pages/Drivers/Drivers'
 import AddAdminPage from './Pages/Admin/AddAdminPage'
+import AdminListPage from './Pages/Admin/AdminListPage'
 
 export default function App() {
   const location = useLocation()
@@ -38,17 +39,19 @@ export default function App() {
           <Routes>
 
             {/* Public */}
-            <Route path="/login" element={<Login/>} />
+            <Route path="/login" element={<Login />} />
 
             {/* Protected */}
             <Route path="/" element={<ProtectedRoute><Verifications /></ProtectedRoute>} />
             <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
             <Route path="/logout" element={<ProtectedRoute><LogoutPage /></ProtectedRoute>} />
             <Route path="/restaurants" element={<ProtectedRoute><Restaurants /></ProtectedRoute>} />
-            <Route path="/verification" element={<ProtectedRoute><Verifications/></ProtectedRoute>} />
-            <Route path="/suppliers" element={<ProtectedRoute><Suppliers/></ProtectedRoute>} />
-            <Route path="/drivers" element={<ProtectedRoute><Driver/></ProtectedRoute>} />
-            <Route path="/add-admin" element={<ProtectedRoute><AddAdminPage/></ProtectedRoute>} />
+            <Route path="/verification" element={<ProtectedRoute><Verifications /></ProtectedRoute>} />
+            <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
+            <Route path="/drivers" element={<ProtectedRoute><Driver /></ProtectedRoute>} />
+            <Route path="/add-admin" element={<ProtectedRoute><AddAdminPage /></ProtectedRoute>} />
+            <Route path="/add-admin" element={<ProtectedRoute><AddAdminPage /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><AdminListPage /></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />

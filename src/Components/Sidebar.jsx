@@ -43,7 +43,8 @@ export default function Sidebar() {
 
   // safety check (on refresh)
   if (!user) return null;
-
+  console.log(user);
+  
   // role-based menu
   const menuItems =user.role === "SUPERADMIN"  ? superAdminMenu : user.role === "ADMIN" ? adminMenu  : [];
 

@@ -7,7 +7,7 @@ const AuthContext = createContext(null);
 const STORAGE_KEY = "ecom_admin_auth";
 const TOKEN_KEY = "token";
 
-// ⏰ TEST TIME → 2days
+// ⏰  TIME → 2days
 const EXPIRY_TIME = 42 * 60 * 60 * 1000;
 
 export function AuthProvider({ children }) {
@@ -56,19 +56,20 @@ export function AuthProvider({ children }) {
   ---------------------------------------- */
   const login = async ({ username, password }) => {
     try {
-      const res = await API.post("/admin/login", {
+      const res = await API.post("auth/admin/login", {
         username,
         password,
       });
+      console.log(res);
 
       const payload = {
         username,
-        role: res.data.role,
-        token: res.data.token,
+        role: res.data.admin.role,
+        token: res.data.accessToken,
         expiresAt: Date.now() + EXPIRY_TIME,
       };
 
-      localStorage.setItem(TOKEN_KEY, res.data.token);
+      localStorage.setItem(TOKEN_KEY, res.data.accessToken);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 
       setUser(payload);

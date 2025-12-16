@@ -20,16 +20,17 @@ export default API;
 // ================= create ADMINS ==================
 export async function createAdmin(formData) {
   try {
-    const res = await API.post(`${API_BASE}/admin/create-admin`, formData);
+    const res = await API.post("/admin/create", formData); // ✅ FIXED URL
     return { ok: true, data: res.data };
   } catch (error) {
-    console.error("Error creating admin:", error.response?.data || error.message);
     return {
       ok: false,
-      message: error.response?.data?.message || "Failed to create admin",
+      message:
+        error.response?.data?.message || "Failed to create admin",
     };
   }
 }
+
 // ================= DELETE ADMIN ==================
 export async function deleteAdmin(id) {
   try {
@@ -40,6 +41,34 @@ export async function deleteAdmin(id) {
     return {
       ok: false,
       message: error.response?.data?.message || "Failed to delete admin",
+    };
+  }
+}
+// ================= ADMIN List ==================
+export async function AdminList() {
+  try {
+    const res = await API.get(`${API_BASE}/admin/list`);
+    return res.data;
+  } catch (error) {
+    console.error("Error fetching admin list:", error.response?.data || error.message);
+    return {
+      ok: false,
+      message: error.response?.data?.message || "Failed to fetch admin list",
+    };
+  }
+}
+
+// ================= RESTAURANT PENDING LIST ==================
+export async function restaurantList() {
+  try {
+    const res = await API.get ("/admin/restaurants/pending");
+    return res.data;
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message ||
+        "Failed to fetch restaurant list",
     };
   }
 }
