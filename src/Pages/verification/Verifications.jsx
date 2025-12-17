@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import RestaurantVerifi from "../restaurants/RestaurantVerifi";
 import DriversVerifi from "../Drivers/DriversVerifi";
+import RestaurantVerifi from "../restaurants/RestaurantPending";
 
 const Verifications = () => {
   const [activeSection, setActiveSection] = useState("restaurant");

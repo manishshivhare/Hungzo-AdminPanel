@@ -157,7 +157,7 @@ const handleSubmit = async (e) => {
             </motion.button>
           </motion.div>
 
-          {/* 🔒 Password Strength */}
+          {/* 🔒 Password Strength
           {password && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -169,7 +169,7 @@ const handleSubmit = async (e) => {
                 Password Strength: <b>{strength.label}</b>
               </span>
             </motion.div>
-          )}
+          )} */}
 
           {/* Login Button */}
           <motion.button

@@ -25,6 +25,8 @@ const adminMenu = [
 ];
 
 const superAdminMenu = [
+  { to: "/product", label: "My Product", icon: CubeIcon },
+  { to: "/Add-product", label: "Add Product", icon: CubeIcon },
   { to: "/restaurants", label: "Restaurants", icon: BuildingOffice2Icon },
   { to: "/verification", label: "Verification", icon: ClipboardDocumentListIcon },
   { to: "/suppliers", label: "Suppliers", icon: CubeIcon },
@@ -43,7 +45,7 @@ export default function Sidebar() {
 
   // safety check (on refresh)
   if (!user) return null;
-  console.log(user);
+  // console.log(user);
   
   // role-based menu
   const menuItems =user.role === "SUPERADMIN"  ? superAdminMenu : user.role === "ADMIN" ? adminMenu  : [];

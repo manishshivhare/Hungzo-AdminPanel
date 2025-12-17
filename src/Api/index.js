@@ -58,10 +58,14 @@ export async function AdminList() {
   }
 }
 
-// ================= RESTAURANT PENDING LIST ==================
-export async function restaurantList() {
+// ================= RESTAURANT ==================
+
+
+// ================= RESTAURANTLIST ==================
+
+export async function restaurantprofile() {
   try {
-    const res = await API.get ("/admin/restaurants/pending");
+    const res = await API.get("/restaurants/profile");
     return res.data;
   } catch (error) {
     return {
@@ -69,6 +73,61 @@ export async function restaurantList() {
       message:
         error.response?.data?.message ||
         "Failed to fetch restaurant list",
+    };
+  }
+}
+
+// ================= RESTAURANT PENDING LIST ==================
+export async function restaurantList() {
+  try {
+    const res = await API.get("/admin/restaurants/pending");
+    return res.data;
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message ||
+        "Failed to fetch restaurant list",
+    };
+  }
+}
+
+// ================= RESTAURANT APPROVE =================
+export async function approveRestaurantReq(id) {
+  try {
+    const res = await API.post(
+      `${API_BASE}/admin/restaurants/approve/${id}`
+    );
+    return res.data;
+  } catch (error) {
+    console.error(
+      `restaurants/approve/${id}`,
+      error.response?.data || error.message
+    );
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to approve restaurant",
+    };
+  }
+}
+
+// ================= RESTAURANT REJECT =================
+export async function rejectRestaurantReq(id) {
+  try {
+    const res = await API.post(
+      `${API_BASE}/admin/restaurants/reject/${id}`
+    );
+    return res.data;
+  } catch (error) {
+    console.error(
+      `restaurants/reject/${id}`,
+      error.response?.data || error.message
+    );
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to reject restaurant",
     };
   }
 }

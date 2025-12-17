@@ -6,7 +6,6 @@ import ProtectedRoute from './Components/ProtectedRoute'
 import LogoutPage from './Pages/auth/LogoutPage'
 import NotFound from './Pages/auth/NotFound'
 import OrdersPage from './Pages/Orders/OrdersPage'
-import Restaurants from './Pages/restaurants/restaurants'
 import Sidebar from './Components/Sidebar'
 import Login from './Pages/auth/Login'
 import Verifications from './Pages/verification/Verifications'
@@ -14,6 +13,7 @@ import Suppliers from './Pages/Suppliers/Suppliers'
 import Driver from './Pages/Drivers/Drivers'
 import AddAdminPage from './Pages/Admin/AddAdminPage'
 import AdminListPage from './Pages/Admin/AdminListPage'
+import Restaurants from './Pages/restaurants/Restaurants'
 
 export default function App() {
   const location = useLocation()
@@ -42,7 +42,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
 
             {/* Protected */}
-            <Route path="/" element={<ProtectedRoute><Verifications /></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
             <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
             <Route path="/logout" element={<ProtectedRoute><LogoutPage /></ProtectedRoute>} />
             <Route path="/restaurants" element={<ProtectedRoute><Restaurants /></ProtectedRoute>} />
