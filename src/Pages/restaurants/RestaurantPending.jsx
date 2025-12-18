@@ -1,18 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { restaurantList } from "../../Api/index";
-import {  approveRestaurantReq, rejectRestaurantReq,} from "../../Api/index";
+import {
+  restaurantList,
+  approveRestaurantReq,
+  rejectRestaurantReq,
+} from "../../Api/index";
 import {
   User,
   X,
   CheckCircle,
   XCircle,
-  Phone,
-  FileText,
   MapPin,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useAuth } from "../../Context/AuthProvider";
 
 const RestaurantVerifi = () => {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "SUPERADMIN"; // ✅ role check
+
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
@@ -25,7 +30,7 @@ const RestaurantVerifi = () => {
       if (res?.ok !== false) {
         setRestaurants(res.data || res);
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to load restaurants");
     } finally {
       setLoading(false);
@@ -41,12 +46,10 @@ const RestaurantVerifi = () => {
     setActionLoading(id);
     try {
       const res = await approveRestaurantReq(id);
-
       if (res?.ok === false) {
         toast.error(res.message);
         return;
       }
-
       toast.success("Restaurant approved successfully ✅");
       setSelectedRestaurant(null);
       fetchRestaurant();
@@ -62,12 +65,10 @@ const RestaurantVerifi = () => {
     setActionLoading(id);
     try {
       const res = await rejectRestaurantReq(id);
-
       if (res?.ok === false) {
         toast.error(res.message);
         return;
       }
-
       toast.success("Restaurant rejected ❌");
       setSelectedRestaurant(null);
       fetchRestaurant();
@@ -112,10 +113,7 @@ const RestaurantVerifi = () => {
               </tr>
             ) : (
               restaurants.map((res) => (
-                <tr
-                  key={res._id}
-                  className="border-b hover:bg-slate-50"
-                >
+                <tr key={res._id} className="border-b hover:bg-slate-50">
                   <td className="px-5 py-4 font-medium">
                     {res.name}
                     <div className="text-xs text-slate-500">
@@ -153,25 +151,33 @@ const RestaurantVerifi = () => {
 
                   <td className="px-5 py-4">
                     <div className="flex justify-center gap-2">
-                      <button
-                        disabled={actionLoading === res._id}
-                        onClick={() => handleApprove(res._id)}
-                        className="px-3 py-1.5 bg-green-600 text-white text-xs rounded disabled:opacity-50"
-                      >
-                        {actionLoading === res._id
-                          ? "Approving..."
-                          : "Approve"}
-                      </button>
+                      {isSuperAdmin ? (
+                        <>
+                          <button
+                            disabled={actionLoading === res._id}
+                            onClick={() => handleApprove(res._id)}
+                            className="px-3 py-1.5 bg-green-600 text-white text-xs rounded disabled:opacity-50"
+                          >
+                            {actionLoading === res._id
+                              ? "Approving..."
+                              : "Approve"}
+                          </button>
 
-                      <button
-                        disabled={actionLoading === res._id}
-                        onClick={() => handleReject(res._id)}
-                        className="px-3 py-1.5 bg-rose-600 text-white text-xs rounded disabled:opacity-50"
-                      >
-                        {actionLoading === res._id
-                          ? "Rejecting..."
-                          : "Reject"}
-                      </button>
+                          <button
+                            disabled={actionLoading === res._id}
+                            onClick={() => handleReject(res._id)}
+                            className="px-3 py-1.5 bg-rose-600 text-white text-xs rounded disabled:opacity-50"
+                          >
+                            {actionLoading === res._id
+                              ? "Rejecting..."
+                              : "Reject"}
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-slate-400">
+                          No Permission
+                        </span>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -209,17 +215,28 @@ const RestaurantVerifi = () => {
             </div>
 
             <div className="flex justify-end gap-3 mt-6">
+              {isSuperAdmin && (
+                <>
+                  <button
+                    onClick={() => handleReject(selectedRestaurant._id)}
+                    className="px-4 py-2 bg-red-100 text-red-700 rounded"
+                  >
+                    <XCircle size={16} /> Reject
+                  </button>
+                  <button
+                    onClick={() => handleApprove(selectedRestaurant._id)}
+                    className="px-4 py-2 bg-green-600 text-white rounded"
+                  >
+                    <CheckCircle size={16} /> Approve
+                  </button>
+                </>
+              )}
+
               <button
-                onClick={() => handleReject(selectedRestaurant._id)}
-                className="px-4 py-2 bg-red-100 text-red-700 rounded"
+                onClick={() => setSelectedRestaurant(null)}
+                className="px-4 py-2 bg-slate-100 rounded"
               >
-                <XCircle size={16} /> Reject
-              </button>
-              <button
-                onClick={() => handleApprove(selectedRestaurant._id)}
-                className="px-4 py-2 bg-green-600 text-white rounded"
-              >
-                <CheckCircle size={16} /> Approve
+                Close
               </button>
             </div>
           </div>

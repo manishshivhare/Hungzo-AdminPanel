@@ -80,7 +80,7 @@ export async function restaurantprofile() {
 // ================= RESTAURANT PENDING LIST ==================
 export async function restaurantList() {
   try {
-    const res = await API.get("/admin/restaurants/pending");
+    const res = await API.get("/admin/dashboard/restaurants/pending");
     return res.data;
   } catch (error) {
     return {
@@ -91,6 +91,37 @@ export async function restaurantList() {
     };
   }
 }
+// ================= RESTAURANT rejected LIST ==================
+export async function restaurantRejected() {
+  try {
+    const res = await API.get("/admin/dashboard/restaurants/rejected");
+    return res.data;
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message ||
+        "Failed to fetch restaurant list",
+    };
+  }
+}
+// =================  APPROVEd RESTAURANT LIST ==================
+export async function restaurantApproved () {
+  try {
+    const res = await API.get("/admin/dashboard/restaurants/verified");
+    console.log(res);
+    
+    return res.data;
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message ||
+        "Failed to fetch restaurant list",
+    };
+  }
+}
+
 
 // ================= RESTAURANT APPROVE =================
 export async function approveRestaurantReq(id) {
