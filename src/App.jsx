@@ -14,6 +14,8 @@ import Driver from './Pages/Drivers/Drivers'
 import AddAdminPage from './Pages/Admin/AddAdminPage'
 import AdminListPage from './Pages/Admin/AdminListPage'
 import Restaurants from './Pages/restaurants/Restaurants'
+import ProductsList from './Pages/Product/ProductsList'
+import AddProduct from './Pages/Product/AddProduct'
 
 export default function App() {
   const location = useLocation()
@@ -22,7 +24,7 @@ export default function App() {
   const noSidebar = location.pathname === '/login'
 
   return (
-    <div className="h-screen w-screen flex overflow-hidden bg-gray-700">
+    <div className="h-screen w-screen flex overflow-hidden bg-gray-100">
 
       <Toaster position="top-center" />
 
@@ -50,8 +52,9 @@ export default function App() {
             <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
             <Route path="/drivers" element={<ProtectedRoute><Driver /></ProtectedRoute>} />
             <Route path="/add-admin" element={<ProtectedRoute><AddAdminPage /></ProtectedRoute>} />
-            <Route path="/add-admin" element={<ProtectedRoute><AddAdminPage /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AdminListPage /></ProtectedRoute>} />
+            <Route path='/product' element={<ProtectedRoute><ProductsList /></ProtectedRoute>} />
+            <Route path='/add-product' element={<ProtectedRoute><AddProduct /></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />

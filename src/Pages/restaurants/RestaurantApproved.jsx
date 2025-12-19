@@ -1,24 +1,34 @@
 import React, { useEffect, useState } from "react";
-import { restaurantApproved } from "../../Api";
 import {
-  User,
-  X,
-  CheckCircle,
-  MapPin,
-} from "lucide-react";
+  restaurantApproved,
+  rejectRestaurantReq,
+} from "../../Api";
+import { User, X, MapPin, XCircle } from "lucide-react";
 import toast from "react-hot-toast";
+import { useAuth } from "../../Context/AuthProvider";
 
 const RestaurantApproved = () => {
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [actionLoading, setActionLoading] = useState(null);
+
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "SUPERADMIN";
 
   // ================= FETCH =================
   const fetchApprovedRestaurants = async () => {
     try {
       const res = await restaurantApproved();
       if (res?.ok !== false) {
-        setRestaurants(res.data || res);
+        const data = res.data || res;
+
+        // ✅ NEWEST FIRST (by updatedAt)
+        const sorted = [...data].sort(
+          (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
+        );
+
+        setRestaurants(sorted);
       }
     } catch {
       toast.error("Failed to load approved restaurants");
@@ -30,6 +40,21 @@ const RestaurantApproved = () => {
   useEffect(() => {
     fetchApprovedRestaurants();
   }, []);
+
+  // ================= REJECT =================
+  const handleReject = async (id) => {
+    setActionLoading(id);
+    try {
+      await rejectRestaurantReq(id);
+      toast.success("Restaurant rejected ❌");
+      setSelectedRestaurant(null);
+      fetchApprovedRestaurants();
+    } catch {
+      toast.error("Reject failed");
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -44,77 +69,67 @@ const RestaurantApproved = () => {
       {/* ================= TABLE ================= */}
       <div className="bg-white rounded-xl shadow-sm border h-[83vh] overflow-y-auto">
         <table className="w-full text-sm">
-          {/* HEADER */}
           <thead className="bg-slate-100 border-b sticky top-0 z-10">
             <tr className="text-xs uppercase tracking-wide text-slate-600">
-              <th className="px-6 py-4 text-left">Owner</th>
+              <th className="px-6 py-4 text-left">Restaurant</th>
               <th className="px-6 py-4 text-left">Phone</th>
               <th className="px-6 py-4 text-left">Approved On</th>
               <th className="px-6 py-4 text-center">View</th>
+              {isSuperAdmin && (
+                <th className="px-6 py-4 text-center">Action</th>
+              )}
             </tr>
           </thead>
 
-          {/* BODY */}
           <tbody className="divide-y">
-            {restaurants.length === 0 ? (
-              <tr>
-                <td colSpan="4" className="py-16 text-center text-slate-400">
-                  No approved restaurants
+            {restaurants.map((res, index) => (
+              <tr
+                key={res._id}
+                className={`${
+                  index % 2 === 0 ? "bg-white" : "bg-slate-50"
+                } hover:bg-slate-100`}
+              >
+                <td className="px-6 py-4">
+                  <p className="font-medium">{res.name}</p>
+                  <span className="text-xs text-green-600">Approved</span>
                 </td>
-              </tr>
-            ) : (
-              restaurants.map((res, index) => (
-                <tr
-                  key={res._id}
-                  className={`transition ${index % 2 === 0 ? "bg-white" : "bg-slate-50"
-                    } hover:bg-slate-100`}
-                >
-                  {/* OWNER */}
-                  <td className="px-6 py-4">
-                    <p className="font-medium text-slate-800">
-                      {res.name}
-                    </p>
 
-                    <span
-                      className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full
-                ${res.isVerified
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-600"
-                        }`}
-                    >
-                      {res.isVerified ? "Verified" : "Not Verified"}
-                    </span>
-                  </td>
+                <td className="px-6 py-4">
+                  {res.owner?.phone || "—"}
+                </td>
 
-                  {/* PHONE */}
-                  <td className="px-6 py-4 text-slate-600">
-                    {res.phone || "—"}
-                  </td>
+                <td className="px-6 py-4">
+                  {new Date(res.updatedAt).toLocaleDateString("en-IN")}
+                </td>
 
-                  {/* DATE */}
-                  <td className="px-6 py-4 text-slate-600">
-                    {new Date(res.updatedAt).toLocaleDateString()}
-                  </td>
+                <td className="px-6 py-4 text-center">
+                  <button
+                    onClick={() => setSelectedRestaurant(res)}
+                    className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-slate-200 hover:bg-slate-300"
+                  >
+                    <User size={16} />
+                  </button>
+                </td>
 
-                  {/* ACTION */}
+                {isSuperAdmin && (
                   <td className="px-6 py-4 text-center">
                     <button
-                      onClick={() => setSelectedRestaurant(res)}
-                      className="inline-flex items-center justify-center w-9 h-9
-                           rounded-full bg-slate-200 hover:bg-slate-300
-                           transition focus:outline-none focus:ring-2
-                           focus:ring-slate-400"
+                      disabled={actionLoading === res._id}
+                      onClick={() => handleReject(res._id)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 disabled:opacity-50"
                     >
-                      <User size={16} />
+                      <XCircle size={14} />
+                      {actionLoading === res._id
+                        ? "Blocking..."
+                        : "Block"}
                     </button>
                   </td>
-                </tr>
-              ))
-            )}
+                )}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
-
 
       {/* ================= MODAL ================= */}
       {selectedRestaurant && (
@@ -122,82 +137,49 @@ const RestaurantApproved = () => {
           <div className="bg-white max-w-lg w-full rounded-xl p-6 relative">
             <button
               onClick={() => setSelectedRestaurant(null)}
-              className="absolute top-4 right-4 text-slate-600 hover:text-black"
+              className="absolute top-4 right-4 text-slate-500 hover:text-black"
             >
               <X />
             </button>
 
-            <h2 className="text-xl font-semibold mb-4">
+            <h2 className="text-xl font-semibold mb-5">
               ✅ Approved Restaurant Details
             </h2>
 
-            <div className="space-y-3 text-sm">
-              {/* BASIC INFO */}
-              <p>
-                <b>Restaurant ID:</b>{" "}
-                {selectedRestaurant.restaurantId || "—"}
-              </p>
-              <p>
-                <b>Restaurant Name:</b>{" "}
-                {selectedRestaurant.name || "—"}
-              </p>
+            <div className="space-y-3 text-sm text-slate-700">
+              <p><b>Restaurant Name:</b> {selectedRestaurant.name}</p>
+              <p><b>Status:</b> {selectedRestaurant.verificationStatus}</p>
+              <p><b>Active:</b> {selectedRestaurant.isActive ? "Yes" : "No"}</p>
+
+              <hr />
+              <p className="font-semibold">Owner Details</p>
+              <p><b>Name:</b> {selectedRestaurant.owner?.name}</p>
+              <p><b>Phone:</b> {selectedRestaurant.owner?.phone}</p>
+
+              <hr />
+              <p><b>FSSAI:</b> {selectedRestaurant.fssai || "N/A"}</p>
+              <p><b>GST:</b> {selectedRestaurant.gst || "N/A"}</p>
 
               <p>
-                <b>Status:</b>{" "}
-                {selectedRestaurant.verificationStatus || "APPROVED"}
-              </p>
-
-              {/* OWNER INFO */}
-              <p>
-                <b>Owner Name:</b>{" "}
-                {selectedRestaurant.owner?.name ||
-                  selectedRestaurant.name ||
-                  "—"}
-              </p>
-
-              <p>
-                <b>Owner Phone:</b>{" "}
-                {selectedRestaurant.owner?.phone ||
-                  selectedRestaurant.phone ||
-                  "—"}
-              </p>
-
-              {/* BUSINESS INFO */}
-              <p>
-                <b>Accept Date:</b>{" "}
-                {selectedRestaurant.updatedAt
-                  ? new Date(selectedRestaurant.updatedAt).toLocaleDateString(
-                    "en-IN",
-                    {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    }
-                  )
-                  : "N/A"}
+                <b>Created:</b>{" "}
+                {new Date(selectedRestaurant.createdAt).toLocaleString("en-IN")}
               </p>
               <p>
-                <b>FSSAI:</b>{" "}
-                {selectedRestaurant.fssai || "N/A"}
+                <b>Approved On:</b>{" "}
+                {new Date(selectedRestaurant.updatedAt).toLocaleString("en-IN")}
               </p>
 
-              <p>
-                <b>GST:</b>{" "}
-                {selectedRestaurant.gst || "N/A"}
+              <hr />
+              <p className="font-semibold flex items-center gap-1">
+                <MapPin size={16} /> Address
               </p>
 
-              {/* ADDRESS */}
-              {selectedRestaurant.address?.length > 0 && (
-                <p className="flex gap-1 items-start">
-                  <MapPin size={16} className="mt-0.5" />
-                  <span>
-                    {selectedRestaurant.address[0].line1},{" "}
-                    {selectedRestaurant.address[0].city},{" "}
-                    {selectedRestaurant.address[0].state}{" "}
-                    {selectedRestaurant.address[0].pincode}
-                  </span>
+              {selectedRestaurant.addresses?.map((addr, i) => (
+                <p key={i} className="ml-5">
+                  {addr.label && <b>{addr.label}: </b>}
+                  {addr.line1}, {addr.city}, {addr.state} - {addr.pincode}
                 </p>
-              )}
+              ))}
             </div>
 
             <div className="flex justify-end mt-6">
@@ -211,7 +193,6 @@ const RestaurantApproved = () => {
           </div>
         </div>
       )}
-
     </>
   );
 };

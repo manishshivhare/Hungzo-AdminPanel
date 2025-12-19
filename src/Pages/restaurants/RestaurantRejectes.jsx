@@ -8,8 +8,8 @@ import toast from "react-hot-toast";
 import { useAuth } from "../../Context/AuthProvider";
 
 const RestaurantRejectes = () => {
-  const { user } = useAuth(); // ✅ get logged-in user
-  const isSuperAdmin = user?.role === "SUPERADMIN"; // ✅ role check
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "SUPERADMIN";
 
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +21,14 @@ const RestaurantRejectes = () => {
     try {
       const res = await restaurantRejected();
       if (res?.ok !== false) {
-        setRestaurants(res.data || res);
+        const data = res.data || res;
+
+        // ✅ NEWEST FIRST (by updatedAt)
+        const sorted = [...data].sort(
+          (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
+        );
+
+        setRestaurants(sorted);
       }
     } catch {
       toast.error("Failed to load rejected restaurants");
@@ -39,12 +46,10 @@ const RestaurantRejectes = () => {
     setActionLoading(id);
     try {
       const res = await approveRestaurantReq(id);
-
       if (res?.ok === false) {
         toast.error(res.message);
         return;
       }
-
       toast.success("Restaurant re-approved ✅");
       setSelectedRestaurant(null);
       fetchRejectedRestaurants();
@@ -116,7 +121,7 @@ const RestaurantRejectes = () => {
                   </td>
 
                   <td className="px-5 py-4">
-                    {new Date(res.updatedAt).toLocaleDateString()}
+                    {new Date(res.updatedAt).toLocaleDateString("en-IN")}
                   </td>
 
                   <td className="px-5 py-4 text-center">
@@ -177,11 +182,11 @@ const RestaurantRejectes = () => {
               <p><b>FSSAI:</b> {selectedRestaurant.fssai || "N/A"}</p>
               <p><b>GST:</b> {selectedRestaurant.gst || "N/A"}</p>
 
-              {selectedRestaurant.address?.[0] && (
+              {selectedRestaurant.addresses?.[0] && (
                 <p className="flex gap-1 items-center">
                   <MapPin size={16} />
-                  {selectedRestaurant.address[0].line1},{" "}
-                  {selectedRestaurant.address[0].city}
+                  {selectedRestaurant.addresses[0].line1},{" "}
+                  {selectedRestaurant.addresses[0].city}
                 </p>
               )}
             </div>
@@ -197,9 +202,7 @@ const RestaurantRejectes = () => {
               {isSuperAdmin && (
                 <button
                   disabled={actionLoading === selectedRestaurant._id}
-                  onClick={() =>
-                    handleReApprove(selectedRestaurant._id)
-                  }
+                  onClick={() => handleReApprove(selectedRestaurant._id)}
                   className="px-4 py-2 bg-green-600 text-white rounded disabled:opacity-50"
                 >
                   {actionLoading === selectedRestaurant._id

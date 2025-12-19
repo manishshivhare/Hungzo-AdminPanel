@@ -16,9 +16,9 @@ import { useAuth } from "../Context/AuthProvider";
 /* -------------------- MENU CONFIG -------------------- */
 
 const adminMenu = [
+  { to: "/orders", label: "Orders", icon: ClipboardDocumentListIcon },
   { to: "/product", label: "My Product", icon: CubeIcon },
   { to: "/Add-product", label: "Add Product", icon: CubeIcon },
-  { to: "/orders", label: "Orders", icon: ClipboardDocumentListIcon },
   { to: "/restaurants", label: "Restaurants", icon: BuildingOffice2Icon },
   { to: "/inventory", label: "Inventory", icon: ArchiveBoxIcon },
   { to: "/profile", label: "Profile", icon: UserGroupIcon },

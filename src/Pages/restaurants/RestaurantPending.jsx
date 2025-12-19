@@ -16,7 +16,7 @@ import { useAuth } from "../../Context/AuthProvider";
 
 const RestaurantVerifi = () => {
   const { user } = useAuth();
-  const isSuperAdmin = user?.role === "SUPERADMIN"; // ✅ role check
+  const isSuperAdmin = user?.role === "SUPERADMIN";
 
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +28,14 @@ const RestaurantVerifi = () => {
     try {
       const res = await restaurantList();
       if (res?.ok !== false) {
-        setRestaurants(res.data || res);
+        const data = res.data || res;
+
+        // ✅ NEWEST FIRST (by createdAt)
+        const sorted = [...data].sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        );
+
+        setRestaurants(sorted);
       }
     } catch {
       toast.error("Failed to load restaurants");
@@ -137,7 +144,7 @@ const RestaurantVerifi = () => {
                   </td>
 
                   <td className="px-5 py-4">
-                    {new Date(res.createdAt).toLocaleDateString()}
+                    {new Date(res.createdAt).toLocaleDateString("en-IN")}
                   </td>
 
                   <td className="px-5 py-4 text-center">
