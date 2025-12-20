@@ -16,6 +16,7 @@ import AdminListPage from './Pages/Admin/AdminListPage'
 import Restaurants from './Pages/restaurants/Restaurants'
 import ProductsList from './Pages/Product/ProductsList'
 import AddProduct from './Pages/Product/AddProduct'
+import LiveOrder from './Pages/Orders/LiveOrder'
 
 export default function App() {
   const location = useLocation()
@@ -33,11 +34,8 @@ export default function App() {
 
       <div className="flex-1 flex flex-col">
 
-        {/* Header visible except login */}
-        {!noSidebar && <Header />}
-
         {/* REMOVE PADDING → full area */}
-        <main className="flex-1 w-full h-full">
+        <main className="flex-1 w-full h-full ">
           <Routes>
 
             {/* Public */}

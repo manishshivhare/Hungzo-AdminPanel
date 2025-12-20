@@ -30,7 +30,7 @@ const Restaurants = () => {
   const [activeTab, setActiveTab] = useState("pending");
 
   return (
-    <div className="p-1 space-y-2">
+    <div className="p-1 py-3 space-y-2">
       {/* ================= TABS ================= */}
       <div className="flex gap-2 bg-white p-1 rounded-lg shadow-sm border w-fit">
         {TABS.map((tab) => {

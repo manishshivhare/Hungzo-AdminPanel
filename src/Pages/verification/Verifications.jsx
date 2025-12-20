@@ -6,9 +6,9 @@ const Verifications = () => {
   const [activeSection, setActiveSection] = useState("restaurant");
 
   return (
-    <div className="min-h-screen bg-[#061D22]">
+    <div className="min-h-screen ">
       {/* Buttons */}
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-4 m-6 ">
         <button
           onClick={() => setActiveSection("restaurant")}
           className={`px-4 py-2 rounded font-medium ${

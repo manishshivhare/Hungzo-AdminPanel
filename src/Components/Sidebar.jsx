@@ -30,7 +30,6 @@ const superAdminMenu = [
   { to: "/Add-product", label: "Add Product", icon: CubeIcon },
   { to: "/restaurants", label: "Restaurants", icon: BuildingOffice2Icon },
   { to: "/verification", label: "Verification", icon: ClipboardDocumentListIcon },
-  { to: "/suppliers", label: "Suppliers", icon: CubeIcon },
   { to: "/inventory", label: "Inventory", icon: ArchiveBoxIcon },
   { to: "/orders", label: "Orders", icon: ClipboardDocumentListIcon },
   { to: "/drivers", label: "Drivers", icon: TruckIcon },
@@ -52,7 +51,7 @@ export default function Sidebar() {
   const menuItems =user.role === "SUPERADMIN"  ? superAdminMenu : user.role === "ADMIN" ? adminMenu  : [];
 
   return (
-    <aside className="w-64 bg-[#061D22] text-white h-screen p-6 flex flex-col justify-between">
+    <aside className="w-64 bg-[#0a0b0bde] text-white h-screen p-6 flex flex-col justify-between">
       {/* -------------------- TOP -------------------- */}
       <div>
         <Link to="/">
