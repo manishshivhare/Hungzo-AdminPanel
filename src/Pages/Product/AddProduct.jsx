@@ -123,9 +123,9 @@ export default function AddProductPage() {
   };
 
   return (
-    <div className="bg-[#FCE8E6] h-screen overflow-y-auto p-10">
+    <div className="bg-[#FCE8E6] h-screen overflow-y-auto p-10 ">
       <div className="mx-auto max-w-lg mb-8 bg-white rounded-xl shadow-card">
-        <div className="bg-[#082C2C] text-white text-center py-8">
+        <div className="bg-[#082C2C] text-white text-center py-8 rounded-ss-2xl rounded-se-2xl">
           <h2 className="text-2xl font-semibold">Add New Food</h2>
           <p className="text-sm text-slate-200 mt-2">
             Dummy version (No API)

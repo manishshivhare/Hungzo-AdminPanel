@@ -1,7 +1,14 @@
-// OrderHistory.jsx
 import React, { useState } from 'react';
 
-// 📊 DUMMY HISTORY DATA
+/* ================= DATE HELPER ================= */
+const getRandomDate = () => {
+  const start = new Date(2024, 0, 1);
+  const end = new Date();
+  const date = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+  return date.toISOString().split("T")[0]; // YYYY-MM-DD
+};
+
+/* ================= DUMMY HISTORY DATA ================= */
 const generateHistoryData = () => {
   const statuses = ["Completed", "Cancelled", "Refunded"];
   const itemsList = [
@@ -12,18 +19,17 @@ const generateHistoryData = () => {
     "Sushi Platter",
     "Pad Thai"
   ];
-  
+
   const customers = ["John D.", "Sarah M.", "Alex T.", "Maria L.", "James B.", "Emma K."];
-  const dates = ["Today", "Yesterday", "2 days ago", "1 week ago"];
   const times = ["12:30 PM", "1:15 PM", "6:45 PM", "8:20 PM", "11:10 AM"];
-  
+
   return Array.from({ length: 25 }, (_, i) => ({
     id: `HIST${8000 + i}`,
     items: itemsList[Math.floor(Math.random() * itemsList.length)],
     customer: customers[Math.floor(Math.random() * customers.length)],
-    status: statuses[Math.floor(Math.random() * 3)],
-    date: dates[Math.floor(Math.random() * 4)],
-    time: times[Math.floor(Math.random() * 5)],
+    status: statuses[Math.floor(Math.random() * statuses.length)],
+    date: getRandomDate(),              // ✅ FIXED DATE
+    time: times[Math.floor(Math.random() * times.length)],
     total: `$${(Math.random() * 50 + 10).toFixed(2)}`,
     payment: ["Credit Card", "Cash", "PayPal", "Apple Pay"][Math.floor(Math.random() * 4)]
   }));
@@ -31,19 +37,62 @@ const generateHistoryData = () => {
 
 const OrderHistory = () => {
   const [orders] = useState(generateHistoryData());
-  const [filter, setFilter] = useState("all"); // all, completed, cancelled, refunded
+  const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
 
+  /* ================= FILTER ================= */
   const filteredOrders = orders.filter(order => {
     const matchesFilter = filter === "all" || order.status.toLowerCase() === filter.toLowerCase();
-    const matchesSearch = order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.items.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch =
+      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.items.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
+  /* ================= DOWNLOAD ALL CSV (LOGIC ONLY) ================= */
+  const downloadAllOrdersCSV = () => {
+    if (!filteredOrders.length) return;
+
+    const headers = [
+      "Order ID",
+      "Customer",
+      "Items",
+      "Status",
+      "Date",
+      "Time",
+      "Total",
+      "Payment Method"
+    ];
+
+    const rows = filteredOrders.map(o => [
+      o.id,
+      o.customer,
+      o.items,
+      o.status,
+      o.date,
+      o.time,
+      o.total,
+      o.payment
+    ]);
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers, ...rows]
+        .map(row => row.map(item => `"${item}"`).join(","))
+        .join("\n");
+
+    const link = document.createElement("a");
+    link.href = encodeURI(csvContent);
+    link.download = "all_orders.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  /* ================= STATUS UI ================= */
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case "Completed": return "bg-green-100 text-green-800";
       case "Cancelled": return "bg-red-100 text-red-800";
       case "Refunded": return "bg-orange-100 text-orange-800";
@@ -52,7 +101,7 @@ const OrderHistory = () => {
   };
 
   const getStatusIcon = (status) => {
-    switch(status) {
+    switch (status) {
       case "Completed": return "✅";
       case "Cancelled": return "❌";
       case "Refunded": return "🔄";
@@ -69,16 +118,23 @@ const OrderHistory = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b-from-gray-50 to-gray-100">
-      {/* HEADER */}
+
+      {/* ================= HEADER (UI SAME) ================= */}
       <div className="bg-white rounded-lg shadow-sm p-1 mb-2">
         <div className="flex justify-between items-center mb-2">
           <div>
             <h2 className="text-xl font-bold text-gray-800">📊 Order History</h2>
             <p className="text-gray-600 mt-1">View past orders and transactions</p>
           </div>
-         
-        </div>
 
+          {/* 🔥 BUTTON ADDED (NO UI BREAK) */}
+          <button
+            onClick={downloadAllOrdersCSV}
+            className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            ⬇ Download All
+          </button>
+        </div>
         {/* FILTERS AND SEARCH */}
         <div className="flex flex-col md:flex-row gap-4 mb-2">
           <div className="flex-1">

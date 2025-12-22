@@ -16,7 +16,6 @@ import AdminListPage from './Pages/Admin/AdminListPage'
 import Restaurants from './Pages/restaurants/Restaurants'
 import ProductsList from './Pages/Product/ProductsList'
 import AddProduct from './Pages/Product/AddProduct'
-import LiveOrder from './Pages/Orders/LiveOrder'
 
 export default function App() {
   const location = useLocation()
