@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import DriversVerifi from "../Drivers/DriversVerifi";
 import RestaurantVerifi from "../restaurants/RestaurantPending";
+import DriversVerifi from "../Drivers/DriversPendding";
 
 const Verifications = () => {
   const [activeSection, setActiveSection] = useState("restaurant");
@@ -13,8 +13,8 @@ const Verifications = () => {
           onClick={() => setActiveSection("restaurant")}
           className={`px-4 py-2 rounded font-medium ${
             activeSection === "restaurant"
-              ? "bg-white text-amber-700"
-              : "bg-amber-600 text-white"
+              ? "bg-amber-600 text-white"
+              : "bg-white text-amber-700"
           }`}
         >
           Restaurant Verification
@@ -24,8 +24,8 @@ const Verifications = () => {
           onClick={() => setActiveSection("driver")}
           className={`px-4 py-2 rounded font-medium ${
             activeSection === "driver"
-              ? "bg-white text-amber-700"
-              : "bg-amber-600 text-white"
+              ?"bg-amber-600 text-white"
+              :  "bg-white text-amber-700"
           }`}
         >
           Driver Verification

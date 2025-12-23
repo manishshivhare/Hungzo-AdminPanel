@@ -20,7 +20,7 @@ const adminMenu = [
   { to: "/product", label: "My Product", icon: CubeIcon },
   { to: "/Add-product", label: "Add Product", icon: CubeIcon },
   { to: "/restaurants", label: "Restaurants", icon: BuildingOffice2Icon },
-  { to: "/inventory", label: "Inventory", icon: ArchiveBoxIcon },
+  // { to: "/inventory", label: "Inventory", icon: ArchiveBoxIcon },
   { to: "/profile", label: "Profile", icon: UserGroupIcon },
   { to: "/logout", label: "Logout", icon: ArrowRightOnRectangleIcon },
 ];
@@ -30,7 +30,7 @@ const superAdminMenu = [
   { to: "/Add-product", label: "Add Product", icon: CubeIcon },
   { to: "/restaurants", label: "Restaurants", icon: BuildingOffice2Icon },
   { to: "/verification", label: "Verification", icon: ClipboardDocumentListIcon },
-  { to: "/inventory", label: "Inventory", icon: ArchiveBoxIcon },
+  // { to: "/inventory", label: "Inventory", icon: ArchiveBoxIcon },
   { to: "/orders", label: "Orders", icon: ClipboardDocumentListIcon },
   { to: "/drivers", label: "Drivers", icon: TruckIcon },
   { to: "/admin", label: "Admins", icon: UserGroupIcon },
