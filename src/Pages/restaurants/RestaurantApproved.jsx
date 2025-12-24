@@ -153,7 +153,7 @@ const RestaurantApproved = () => {
 
               <hr />
               <p className="font-semibold">Owner Details</p>
-              <p><b>Name:</b> {selectedRestaurant.owner?.name}</p>
+              <p><b>Name:</b> {selectedRestaurant.ownerName}</p>
               <p><b>Phone:</b> {selectedRestaurant.owner?.phone}</p>
 
               <hr />

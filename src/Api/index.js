@@ -172,7 +172,7 @@ export async function rejectRestaurantReq(id) {
 export async function DriversList() {
   try {
     const res = await API.get("/admin/dashboard/drivers/pending");
-    console.log(res.data);
+    // console.log(res.data);
     return res.data;
   }
   catch (error) {
@@ -221,18 +221,18 @@ export async function DriverApproved() {
 export async function approveDriverReq(id) {
   try {
     const res = await API.post(
-      `${API_BASE}/admin/restaurants/approve/${id}`
+      `${API_BASE}/admin/drivers/approve/${id}`
     );
     return res.data;
   } catch (error) {
     console.error(
-      `restaurants/approve/${id}`,
+      `drivers/approve/${id}`,
       error.response?.data || error.message
     );
     return {
       ok: false,
       message:
-        error.response?.data?.message || "Failed to approve restaurant",
+        error.response?.data?.message || "Failed to approve  dreivers",
     };
   }
 }
@@ -241,18 +241,18 @@ export async function approveDriverReq(id) {
 export async function rejectDriverReq(id) {
   try {
     const res = await API.post(
-      `${API_BASE}/admin/restaurants/reject/${id}`
+      `${API_BASE}/admin/drivers/reject/${id}`
     );
     return res.data;
   } catch (error) {
     console.error(
-      `restaurants/reject/${id}`,
+      `drivers/reject/${id}`,
       error.response?.data || error.message
     );
     return {
       ok: false,
       message:
-        error.response?.data?.message || "Failed to reject restaurant",
+        error.response?.data?.message || "Failed to reject driver",
     };
   }
 }

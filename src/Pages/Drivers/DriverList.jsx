@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { DriverApproved as getApprovedDrivers } from "../../Api";
-import { User, CheckCircle, Search, Filter, Download, Eye, Phone, Car, Shield } from "lucide-react";
+import { User, CheckCircle, Search, Filter, Download, Eye, Phone, Car, Shield, Bike } from "lucide-react";
 import toast from "react-hot-toast";
 
 const DriverList = () => {
@@ -47,7 +47,7 @@ const DriverList = () => {
     );
   }, [search, drivers]);
 
- 
+
 
   if (loading) {
     return (
@@ -56,6 +56,7 @@ const DriverList = () => {
       </div>
     );
   }
+  console.log(drivers);
 
   return (
     <div className="space-y-2">
@@ -72,10 +73,7 @@ const DriverList = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            <Filter size={18} className="text-gray-600" />
-            <span className="hidden sm:inline">Filter</span>
-          </button>
+      
           <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
             <Download size={18} className="text-gray-600" />
             <span className="hidden sm:inline">Export</span>
@@ -84,100 +82,126 @@ const DriverList = () => {
       </div>
 
       {/* ================= DRIVERS TABLE ================= */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr className="text-left">
-                <th className="py-4 px-6 font-medium text-gray-700 text-sm uppercase tracking-wider">Driver Info</th>
-                <th className="py-4 px-6 font-medium text-gray-700 text-sm uppercase tracking-wider">Contact</th>
-                <th className="py-4 px-6 font-medium text-gray-700 text-sm uppercase tracking-wider">Vehicle Details</th>
-                <th className="py-4 px-6 font-medium text-gray-700 text-sm uppercase tracking-wider">License</th>
-                <th className="py-4 px-6 font-medium text-gray-700 text-sm uppercase tracking-wider">Status</th>
-                <th className="py-4 px-6 font-medium text-gray-700 text-sm uppercase tracking-wider text-right">Actions</th>
+      <div className="h-[62vh] overflow-y-auto rounded-lg border border-gray-100">
+        <table className="w-full border-collapse">
+
+          {/* TABLE HEAD */}
+          <thead className="sticky top-0 z-10 bg-white border-b">
+            <tr className="text-left text-xs font-semibold text-gray-500">
+              <th className="px-4 py-3">Driver</th>
+              <th className="px-4 py-3">Phone</th>
+              <th className="px-4 py-3">Vehicle</th>
+              <th className="px-4 py-3">License</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3 text-right">Action</th>
+            </tr>
+          </thead>
+
+          {/* TABLE BODY */}
+          <tbody className="divide-y divide-gray-100 bg-white">
+            {filteredDrivers.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="py-12 text-center">
+                  <div className="flex flex-col items-center justify-center text-gray-400">
+                    <User className="w-10 h-10 mb-2 opacity-40" />
+                    <p className="text-sm font-semibold">No drivers found</p>
+                    <p className="text-xs mt-1">Try adjusting your search</p>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            
-            <tbody className="divide-y divide-gray-200 h-[48vh] overflow-y-auto">
-              {filteredDrivers.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="py-12 text-center">
-                    <div className="flex flex-col items-center justify-center text-gray-400">
-                      <User className="w-12 h-12 mb-3 opacity-50" />
-                      <p className="text-lg font-medium">No drivers found</p>
-                      <p className="text-sm mt-1">Try adjusting your search criteria</p>
+            ) : (
+              filteredDrivers.map((driver) => (
+                <tr
+                  key={driver._id}
+                  className="group hover:bg-green-50/40 transition-all duration-200"
+                >
+                  {/* DRIVER */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <div className="w-9 h-9 bg-gradient-to-br from-green-100 to-green-200 rounded-full flex items-center justify-center shadow-sm">
+                          <User className="w-4 h-4 text-green-700" />
+                        </div>
+
+                        {driver.isOnline && (
+                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full" />
+                        )}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm truncate max-w-[140px]">
+                          {driver.user?.name || "—"}
+                        </p>
+                        <p className="text-[11px] text-gray-500">
+                          ID: {driver._id?.slice(-4)}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* PHONE */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-3.5 h-3.5 text-gray-400" />
+                      <span className="text-sm text-gray-700">
+                        {driver.user?.phone || "—"}
+                      </span>
+                    </div>
+                  </td>
+
+                  {/* VEHICLE */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      {driver.vehicleType?.toLowerCase().includes("bike") ? (
+                        <Bike className="w-4 h-4 text-gray-400" />
+                      ) : (
+                        <Car className="w-4 h-4 text-gray-400" />
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {driver.vehicleType || "—"}
+                        </p>
+                        <p className="text-[11px] text-gray-500">
+                          {driver.vehicleNumber || "—"}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* LICENSE */}
+                  <td className="px-4 py-3">
+                    <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono text-gray-700">
+                      {driver.licenseNumber || "—"}
+                    </code>
+                  </td>
+
+                  {/* STATUS */}
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      Approved
+                    </span>
+                  </td>
+
+                  {/* ACTION */}
+                  <td className="px-4 py-3 text-right">
+                    <div className="opacity-0 group-hover:opacity-100 transition">
+                      <button
+                        onClick={() => setSelectedDriver(driver)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 hover:bg-green-100 rounded-lg"
+                      >
+                        <Eye className="w-4 h-4" />
+                        View
+                      </button>
                     </div>
                   </td>
                 </tr>
-              ) : (
-                filteredDrivers.map((driver) => (
-                  <tr key={driver._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                          <User className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{driver.user?.name || "—"}</p>
-                          <p className="text-xs text-gray-500">ID: {driver._id?.slice(-6)}</p>
-                        </div>
-                      </div>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <Phone className="w-4 h-4 text-gray-400" />
-                        {driver.user?.phone || "—"}
-                      </div>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <Car className="w-4 h-4 text-gray-400" />
-                        <div>
-                          <p className="font-medium">{driver.vehicleType || "—"}</p>
-                          <p className="text-sm text-gray-500">{driver.vehicleNumber || "—"}</p>
-                        </div>
-                      </div>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
-                        {driver.licenseNumber || "—"}
-                      </code>
-                    </td>
-                    
-                    <td className="py-4 px-6">
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        <CheckCircle className="w-3 h-3" />
-                        Approved
-                      </span>
-                    </td>
-                    
-                    <td className="py-4 px-6 text-right">
-                      <button
-                        onClick={() => setSelectedDriver(driver)}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                        View Details
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        
-        {/* ================= TABLE FOOTER ================= */}
-        {filteredDrivers.length > 0 && (
-          <div className="px-6 py-4 border-t bg-gray-50 flex justify-between items-center text-sm text-gray-600">
-            <p>Showing <span className="font-semibold">{filteredDrivers.length}</span> of <span className="font-semibold">{drivers.length}</span> drivers</p>
-            <p className="text-gray-500">Sorted by: Recently Added</p>
-          </div>
-        )}
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
+  
 
       {/* ================= MODAL ================= */}
       {selectedDriver && (
@@ -191,20 +215,20 @@ const DriverList = () => {
 
 const DriverModal = ({ driver, onClose }) => (
   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div 
+    <div
       className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Modal Header */}
-      <div className="bg-gradient-to from-green-600 to-green-700 p-6 text-white">
+      <div className="bg-gradient-to from-green-600 to-green-700 p-6 text-black">
         <div className="flex justify-between items-center">
           <div>
             <h3 className="text-2xl font-bold">Driver Details</h3>
-            <p className="text-green-100 mt-1">Complete driver information</p>
+            <p className="text-green-900 mt-1">Complete driver information</p>
           </div>
           <button
             onClick={onClose}
-            className="text-white hover:text-green-200 text-2xl transition-colors"
+            className="text-black hover:text-green-200 text-2xl transition-colors"
           >
             ×
           </button>
@@ -212,7 +236,7 @@ const DriverModal = ({ driver, onClose }) => (
       </div>
 
       {/* Modal Body */}
-      <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+      <div className="px-6 overflow-y-auto max-h-[calc(90vh-120px)]">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Personal Information */}
           <div className="space-y-4">

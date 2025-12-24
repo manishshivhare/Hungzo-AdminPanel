@@ -47,7 +47,8 @@ const RestaurantVerifi = () => {
   useEffect(() => {
     fetchRestaurant();
   }, []);
-
+  // console.log(restaurants);
+  
   // ================= APPROVE =================
   const handleApprove = async (id) => {
     setActionLoading(id);
@@ -129,7 +130,7 @@ const RestaurantVerifi = () => {
                   </td>
 
                   <td className="px-5 py-4">
-                    <div>{res.owner?.name}</div>
+                    <div>{res.ownerName}</div>
                     <div className="text-xs text-slate-500">
                       {res.owner?.phone}
                     </div>
@@ -211,7 +212,7 @@ const RestaurantVerifi = () => {
 
             <div className="space-y-3 text-sm">
               <p><b>Name:</b> {selectedRestaurant.name}</p>
-              <p><b>Owner:</b> {selectedRestaurant.owner?.name}</p>
+              <p><b>Owner:</b> {selectedRestaurant.ownerName}</p>
               <p><b>Phone:</b> {selectedRestaurant.owner?.phone}</p>
               <p><b>FSSAI:</b> {selectedRestaurant.fssai || "N/A"}</p>
               <p><b>GST:</b> {selectedRestaurant.gst || "N/A"}</p>
