@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import DriverList from "./DriverList";
 import DriverRejected from "./DriverRejected";
 import DriversVerifi from "./DriversPendding";
-import { Users, AlertCircle, XCircle, CheckCircle } from "lucide-react";
+import { Users, AlertCircle, XCircle, CheckCircle, HandCoinsIcon } from "lucide-react";
+import DriverEarnings from "./DriverEarnings";
 
 const TABS = [
   {
@@ -30,6 +31,15 @@ const TABS = [
     active: "text-red-600 border-red-600",
     indicator: "bg-red-600",
     button: "bg-red-600 text-white",
+    hover: "hover:text-red-700",
+  },
+  {
+    id: "DriverEarnings",
+    label: "Driver Earnings",
+    icon: HandCoinsIcon,
+    active: "text-red-600 border-red-600",
+    indicator: "bg-red-600",
+    button: "bg-blue-900 text-white",
     hover: "hover:text-red-700",
   },
 ];
@@ -94,6 +104,7 @@ const Drivers = () => {
           {activeTab === "approved" && <DriverList />}
           {activeTab === "pending" && <DriversVerifi />}
           {activeTab === "rejected" && <DriverRejected />}
+          {activeTab === "DriverEarnings" && <DriverEarnings />}
         </div>
       </div>
     </div>
