@@ -1,25 +1,32 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BadgePlus, ArrowDownRight } from "lucide-react";
 import toast from "react-hot-toast";
+import {
+  fetchCategories,
+  addCategory,
+  createProduct,
+} from "../../Api";
 
 export default function AddProductPage() {
   const navigate = useNavigate();
 
-  /* ========================= */
-  /* DUMMY CATEGORIES */
-  /* ========================= */
-  const [categories, setCategories] = useState([
-    { _id: "1", name: "Burger" },
-    { _id: "2", name: "Pizza" },
-    { _id: "3", name: "Drinks" },
-  ]);
+  /* ================= CATEGORY ================= */
+  const [categories, setCategories] = useState([]);
+  const [addcategories, setAddCategories] = useState(false);
+  const [newCategory, setNewCategory] = useState("");
 
-  const [addcategories, setaddCategories] = useState(false);
+  const loadCategories = async () => {
+    const res = await fetchCategories();
+    if (res.ok) setCategories(res.categories);
+    else toast.error(res.message);
+  };
 
-  /* ========================= */
-  /* FORM STATE */
-  /* ========================= */
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  /* ================= FORM ================= */
   const [form, setForm] = useState({
     name: "",
     category: "",
@@ -38,17 +45,15 @@ export default function AddProductPage() {
   const [message, setMessage] = useState(null);
   const maxDesc = 500;
 
-  /* ========================= */
-  /* INPUT HANDLERS */
-  /* ========================= */
+  /* ================= HANDLERS ================= */
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleVarietyChange = (index, field, value) => {
+  const handleVarietyChange = (i, field, value) => {
     const updated = [...varieties];
-    updated[index][field] = value;
+    updated[i][field] = value;
     setVarieties(updated);
   };
 
@@ -58,82 +63,90 @@ export default function AddProductPage() {
       file,
       url: URL.createObjectURL(file),
     }));
-    setImages((prev) => [...prev, ...mapped]);
+    setImages(mapped);
   };
 
-  const removeImage = (idx) => {
+  const removeImage = (i) => {
     setImages((prev) => {
-      const updated = [...prev];
-      URL.revokeObjectURL(updated[idx].url);
-      updated.splice(idx, 1);
-      return updated;
+      const copy = [...prev];
+      URL.revokeObjectURL(copy[i].url);
+      copy.splice(i, 1);
+      return copy;
     });
   };
 
-  /* ========================= */
-  /* SUBMIT (DUMMY SAVE) */
-  /* ========================= */
-  const handleSubmit = (e) => {
+  /* ================= SUBMIT ================= */
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!form.name.trim())
-      return setMessage({ type: "error", text: "Product name is required" });
+      return setMessage({ type: "error", text: "Product name required" });
+
     if (!form.category)
-      return setMessage({ type: "error", text: "Category is required" });
+      return setMessage({ type: "error", text: "Category required" });
+
     if (images.length === 0)
       return setMessage({ type: "error", text: "Upload at least one image" });
 
     setLoading(true);
     setMessage(null);
 
-    /* CREATE DUMMY PRODUCT */
-    const newProduct = {
-      _id: Date.now().toString(),
-      ...form,
-      varieties: varieties.filter((v) => v.name && v.price),
-      images: images.map((img) => img.url),
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const formData = new FormData();
+      formData.append("name", form.name);
+      formData.append("category", form.category);
+      formData.append("status", form.status);
+      formData.append("description", form.description);
 
-    /* SAVE TO LOCAL STORAGE */
-    const existing = JSON.parse(localStorage.getItem("products") || "[]");
-    localStorage.setItem(
-      "products",
-      JSON.stringify([...existing, newProduct])
-    );
+      // ✅ FIX: send varieties as JSON
+      const validVarieties = varieties.filter(
+        (v) => v.name.trim() && v.price
+      );
+      formData.append("varieties", JSON.stringify(validVarieties));
 
-    toast.success("✅ Product added (dummy)");
-    setLoading(false);
+      // images
+      images.forEach((img) => formData.append("images", img.file));
 
-    /* RESET */
-    setForm({
-      name: "",
-      category: "",
-      status: "available",
-      description: "",
-    });
-    setVarieties([
-      { name: "", price: "" },
-      { name: "", price: "" },
-      { name: "", price: "" },
-    ]);
-    setImages([]);
+      const res = await createProduct(formData);
+      if (!res.ok) throw new Error(res.message);
 
-    setTimeout(() => navigate("/my-products"), 800);
+      toast.success("✅ Product created");
+      setMessage({ type: "success", text: "Product added successfully" });
+
+      setForm({
+        name: "",
+        category: "",
+        status: "available",
+        description: "",
+      });
+      setVarieties([
+        { name: "", price: "" },
+        { name: "", price: "" },
+        { name: "", price: "" },
+      ]);
+      setImages([]);
+
+      setTimeout(() => navigate("/product"), 1200);
+    } catch (err) {
+      toast.error(err.message || "Server error");
+      setMessage({ type: "error", text: err.message });
+    } finally {
+      setLoading(false);
+    }
   };
 
+  /* ================= UI ================= */
   return (
-    <div className="bg-[#FCE8E6] h-screen overflow-y-auto p-10 ">
-      <div className="mx-auto max-w-lg mb-8 bg-white rounded-xl shadow-card">
-        <div className="bg-[#082C2C] text-white text-center py-8 rounded-ss-2xl rounded-se-2xl">
+    <div className="bg-[#FCE8E6] min-h-screen p-10">
+      <div className="mx-auto max-w-lg bg-white rounded-xl shadow">
+        <div className="bg-[#082C2C] text-white text-center py-8 rounded-t-xl">
           <h2 className="text-2xl font-semibold">Add New Food</h2>
-          <p className="text-sm text-slate-200 mt-2">
-            Dummy version (No API)
+          <p className="text-sm text-slate-200 mt-1">
+            Fixed frontend (no 500 error)
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* NAME */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 h-[77vh] overflow-y-auto">
           <input
             name="name"
             value={form.name}
@@ -142,11 +155,10 @@ export default function AddProductPage() {
             className="w-full border px-3 py-2 rounded"
           />
 
-          {/* VARIETIES */}
           {["First", "Second", "Third"].map((label, i) => (
             <div key={i} className="flex gap-2">
               <input
-                placeholder={`${label} Type`}
+                placeholder={`${label} Size`}
                 value={varieties[i].name}
                 onChange={(e) =>
                   handleVarietyChange(i, "name", e.target.value)
@@ -165,13 +177,12 @@ export default function AddProductPage() {
             </div>
           ))}
 
-          {/* CATEGORY */}
           {!addcategories ? (
             <div className="flex gap-3">
               <select
-                name="category"
                 value={form.category}
                 onChange={handleChange}
+                name="category"
                 className="w-1/2 border px-3 py-2 rounded"
               >
                 <option value="">Select Category</option>
@@ -184,38 +195,46 @@ export default function AddProductPage() {
 
               <button
                 type="button"
-                onClick={() => setaddCategories(true)}
-                className="text-[#082C2C] flex items-center gap-1"
+                onClick={() => setAddCategories(true)}
+                className="flex items-center gap-1 text-[#082C2C]"
               >
                 <BadgePlus size={18} /> Add
               </button>
             </div>
           ) : (
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <input
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
                 placeholder="New category"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    setCategories((prev) => [
-                      ...prev,
-                      { _id: Date.now().toString(), name: e.target.value },
-                    ]);
-                    setaddCategories(false);
-                  }
-                }}
                 className="border px-3 py-2 rounded"
               />
               <button
                 type="button"
-                onClick={() => setaddCategories(false)}
+                onClick={async () => {
+                  if (!newCategory.trim())
+                    return toast.error("Enter category name");
+                  const res = await addCategory(newCategory);
+                  if (res.ok) {
+                    toast.success("Category added");
+                    setNewCategory("");
+                    setAddCategories(false);
+                    loadCategories();
+                  } else toast.error(res.message);
+                }}
+                className="bg-green-600 text-white px-4 rounded"
+              >
+                Add
+              </button>
+              <button
+                type="button"
+                onClick={() => setAddCategories(false)}
               >
                 <ArrowDownRight />
               </button>
             </div>
           )}
 
-          {/* DESCRIPTION */}
           <textarea
             name="description"
             value={form.description}
@@ -225,8 +244,24 @@ export default function AddProductPage() {
             className="w-full border px-3 py-2 rounded h-24"
           />
 
-          {/* IMAGES */}
           <input type="file" multiple accept="image/*" onChange={handleFiles} />
+
+          {images.length > 0 && (
+            <div className="grid grid-cols-3 gap-2">
+              {images.map((img, i) => (
+                <div key={i} className="relative">
+                  <img src={img.url} className="h-20 w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(i)}
+                    className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 text-xs"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           <button
             disabled={loading}
@@ -238,7 +273,9 @@ export default function AddProductPage() {
           {message && (
             <p
               className={`text-center ${
-                message.type === "error" ? "text-red-600" : "text-green-600"
+                message.type === "error"
+                  ? "text-red-600"
+                  : "text-green-600"
               }`}
             >
               {message.text}

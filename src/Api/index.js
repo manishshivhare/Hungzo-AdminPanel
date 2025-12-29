@@ -109,7 +109,7 @@ export async function restaurantRejected() {
 export async function restaurantApproved() {
   try {
     const res = await API.get("/admin/dashboard/restaurants/verified");
-    console.log(res);
+    // console.log(res);
 
     return res.data;
   } catch (error) {
@@ -191,7 +191,7 @@ export async function DriverRejected() {
   try {
     const res = await API.get("/admin/dashboard/drivers/rejected");
     console.log(res.data);
-    
+
     return res.data;
   } catch (error) {
     return {
@@ -253,6 +253,135 @@ export async function rejectDriverReq(id) {
       ok: false,
       message:
         error.response?.data?.message || "Failed to reject driver",
+    };
+  }
+}
+
+
+
+/* ================= FETCH CATEGORIES ================= */
+export async function fetchCategories() {
+  try {
+    const res = await API.get("/categories/all");
+    return {
+      ok: true,
+      categories: res.data.categories,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to fetch categories",
+    };
+  }
+}
+
+/* ================= CREATE CATEGORY ================= */
+export async function addCategory(name) {
+  try {
+    const res = await API.post("/categories/create", { name });
+    return { ok: true, data: res.data };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to create category",
+    };
+  }
+}
+
+/* ================= CREATE PRODUCT ================= */
+export async function createProduct(formData) {
+  try {
+    const res = await API.post("/products/create", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return { ok: true, data: res.data };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to create product",
+    };
+  }
+}
+
+
+
+/* ================= GET ALL ACTIVE PRODUCTS (PUBLIC) ================= */
+export async function getActiveProducts() {
+  try {
+    const res = await API.get("/products");
+    return { ok: true, data: res.data };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to fetch products",
+    };
+  }
+}
+
+/* ================= GET PRODUCT BY ID (PUBLIC) ================= */
+export async function getProductById(id) {
+  try {
+    const res = await API.get(`/products/${id}`);
+    return { ok: true, data: res.data };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to fetch product",
+    };
+  }
+}
+
+/* ================= MY PRODUCTS (ADMIN) ================= */
+export async function myProducts() {
+  try {
+    const res = await API.get("/products/admin/my");
+    return { ok: true, data: res.data };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to fetch my products",
+    };
+  }
+}
+
+/* ================= UPDATE PRODUCT (ADMIN) ================= */
+export async function updateProduct(id, formData) {
+  try {
+    const res = await API.put(`/products/update/${id}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return { ok: true, data: res.data };
+  } catch (error) {
+    console.error("Update Product Error:", error.response?.data || error.message);
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to update product",
+    };
+  }
+}
+
+/* ================= DELETE PRODUCT (ADMIN) ================= */
+export async function deleteProduct(id) {
+  try {
+    const res = await API.delete(`/products/delete/${id}`);
+    return { ok: true, data: res.data };
+  } catch (error) {
+    console.error("Delete Product Error:", error.response?.data || error.message);
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to delete product",
     };
   }
 }
