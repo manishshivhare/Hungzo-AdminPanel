@@ -139,14 +139,12 @@ export default function AddProductPage() {
   return (
     <div className="bg-[#FCE8E6] min-h-screen p-10">
       <div className="mx-auto max-w-lg bg-white rounded-xl shadow">
-        <div className="bg-[#082C2C] text-white text-center py-8 rounded-t-xl">
+        <div className="bg-[#082C2C] text-white text-center py-4 rounded-t-xl">
           <h2 className="text-2xl font-semibold">Add New Food</h2>
-          <p className="text-sm text-slate-200 mt-1">
-            Fixed frontend (no 500 error)
-          </p>
+      
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 h-[77vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 space-y-3 h-[77vh] overflow-y-auto">
           <input
             name="name"
             value={form.name}
@@ -244,7 +242,7 @@ export default function AddProductPage() {
             className="w-full border px-3 py-2 rounded h-24"
           />
 
-          <input type="file" multiple accept="image/*" onChange={handleFiles} />
+          <input type="file" multiple accept="image/*" onChange={handleFiles} className=""/>
 
           {images.length > 0 && (
             <div className="grid grid-cols-3 gap-2">

@@ -20,7 +20,7 @@ export default API;
 // ================= create ADMINS ==================
 export async function createAdmin(formData) {
   try {
-    const res = await API.post("/admin/create", formData); // ✅ FIXED URL
+    const res = await API.post("/admin/create", formData); 
     return { ok: true, data: res.data };
   } catch (error) {
     return {
@@ -382,6 +382,62 @@ export async function deleteProduct(id) {
       ok: false,
       message:
         error.response?.data?.message || "Failed to delete product",
+    };
+  }
+}
+
+
+/* =================  ORDERS API ================= */
+
+/* ================= GET ADMIN ORDERS ================= */
+export async function getAdminOrders() {
+  try {
+    const res = await API.get("/orders/admin");
+    return { ok: true, data: res.data };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error.response?.data?.message || "Failed to fetch admin orders",
+    };
+  }
+}
+
+/* ================= GET ALL ORDERS (SUPERADMIN) ================= */
+export async function getAllOrders() {
+  try {
+    const res = await API.get("/orders/all");
+    return { ok: true, data: res.data };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error.response?.data?.message || "Failed to fetch all orders",
+    };
+  }
+}
+
+/* ================= UPDATE ORDER STATUS ================= */
+export async function updateOrderStatus(orderId, status) {
+  try {
+    const res = await API.put(`/orders/status/${orderId}`, { orderStatus: status });
+    return { ok: true, data: res.data };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error.response?.data?.message || "Failed to update order status",
+    };
+  }
+}
+
+
+/* ================= GET SINGLE ORDER ================= */
+export async function getOrderById(orderId) {
+  try {
+    const res = await API.get(`/orders/${orderId}`);
+    return { ok: true, data: res.data };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error.response?.data?.message || "Failed to fetch order",
     };
   }
 }

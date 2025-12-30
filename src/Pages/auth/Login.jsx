@@ -2,12 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import bgImage from "../../assets/Store.png";
 import logo from "../../assets/Logo.png";
-import {
-  UserIcon,
-  LockClosedIcon,
-  EyeIcon,
-  EyeSlashIcon,
-} from "@heroicons/react/24/outline";
+import {UserIcon,LockClosedIcon,EyeIcon,EyeSlashIcon,} from "@heroicons/react/24/outline";
 import toast from "react-hot-toast";
 import { useAuth } from "../../Context/AuthProvider";
 import { motion } from "framer-motion";

@@ -1,16 +1,11 @@
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import {
-  PencilIcon,
-  TrashIcon,
-  MagnifyingGlassIcon,
-  PhotoIcon,
+  PencilIcon, TrashIcon, MagnifyingGlassIcon, PhotoIcon,
 } from "@heroicons/react/24/outline";
 
 import {
-  fetchCategories,
-  myProducts,
-  updateProduct,
+  fetchCategories, myProducts, updateProduct, deleteProduct
 } from "../../Api";
 
 export default function ProductsList() {
@@ -21,7 +16,7 @@ export default function ProductsList() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [selectedImages, setSelectedImages] = useState([]);
   const [statusLoading, setStatusLoading] = useState(null);
-  console.log(editingProduct);
+  // console.log(editingProduct);
 
   /* ================= LOAD ================= */
   useEffect(() => {
@@ -77,17 +72,20 @@ export default function ProductsList() {
 
   /* ================= DELETE ================= */
   const handleDelete = async (id) => {
-    if (!confirm("Delete this product?")) return;
+    if (!confirm("Delete this product permanently?")) return;
+
     try {
-      const fd = new FormData();
-      fd.append("isActive", false);
-      await updateProduct(id, fd);
+      const res = await deleteProduct(id); // ✅ CALL DELETE API
+
+      if (!res?.ok) throw new Error();
+
       setProducts((prev) => prev.filter((p) => p._id !== id));
-      toast.success("Product removed");
-    } catch {
+      toast.success("Product deleted permanently");
+    } catch (err) {
       toast.error("Delete failed");
     }
   };
+
 
   /* ================= EDIT ================= */
   const handleEdit = (product) => {
@@ -312,7 +310,7 @@ export default function ProductsList() {
                     + Add
                   </button>
                 </div>
-                 
+
                 <div className="max-h-60 overflow-y-auto">
                   {editingProduct.varieties.map((v, i) => (
                     <div key={i} className="flex gap-2 mb-2">

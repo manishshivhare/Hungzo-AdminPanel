@@ -65,6 +65,7 @@ export function AuthProvider({ children }) {
       const payload = {
         username,
         role: res.data.admin.role,
+        AdminID: res.data.admin.id,
         token: res.data.accessToken,
         expiresAt: Date.now() + EXPIRY_TIME,
       };
