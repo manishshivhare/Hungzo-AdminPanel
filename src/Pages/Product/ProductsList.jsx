@@ -174,7 +174,7 @@ export default function ProductsList() {
 
   /* ================= UI ================= */
   return (
-    <div className="px-6 py-4 h-[90vh] overflow-y-auto">
+    <div className="px-6 py-4 ">
       <h1 className="text-2xl font-semibold mb-4">Products</h1>
 
       {/* SEARCH */}
@@ -189,73 +189,78 @@ export default function ProductsList() {
       </div>
 
       {/* TABLE */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-slate-800 text-white">
-            <tr>
-              <th className="p-3 text-left">Product</th>
-              <th className="p-3 text-center">Varieties</th>
-              <th className="p-3 text-center">Category</th>
-              <th className="p-3 text-center">Status</th>
-              <th className="p-3 text-right">Action</th>
-            </tr>
-          </thead>
+      <div className="bg-white rounded-lg shadow h-[80vh] overflow-hidden">
+        <div className="h-full overflow-y-auto">
+          <table className="w-full border-collapse">
 
-          <tbody>
-            {filtered.map((p) => (
-              <tr key={p._id} className="border-t hover:bg-gray-50">
-                <td className="p-4 flex items-center gap-3">
-                  {p.images?.[0] ? (
-                    <img src={p.images[0]} className="w-12 h-12 rounded" />
-                  ) : (
-                    <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
-                      <PhotoIcon className="w-6 text-gray-400" />
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-medium">{p.name}</p>
-                    <p className="text-sm text-gray-500">{p.description}</p>
-                  </div>
-                </td>
-
-                <td className="p-4 text-center">
-                  {p.varieties?.length || 0}
-                </td>
-
-                <td className="p-4 text-center">
-                  {categories.find((c) => c._id === p.category)?.name || "—"}
-                </td>
-
-                <td className="p-4 text-center">
-                  <select
-                    value={p.status}
-                    disabled={statusLoading === p._id}
-                    onChange={(e) =>
-                      updateStatus(p._id, e.target.value)
-                    }
-                    className={`px-3 py-1 rounded text-white ${p.status === "available"
-                      ? "bg-green-600"
-                      : "bg-red-600"
-                      }`}
-                  >
-                    <option value="available">Available</option>
-                    <option value="not available">Not Available</option>
-                  </select>
-                </td>
-
-                <td className="p-4 flex justify-end gap-2">
-                  <button onClick={() => handleEdit(p)}>
-                    <PencilIcon className="w-5 text-blue-600" />
-                  </button>
-                  <button onClick={() => handleDelete(p._id)}>
-                    <TrashIcon className="w-5 text-red-600" />
-                  </button>
-                </td>
+            {/* TABLE HEAD */}
+            <thead className="bg-slate-800 text-white sticky top-0 z-10">
+              <tr>
+                <th className="p-3 text-left">Product</th>
+                <th className="p-3 text-center">Varieties</th>
+                <th className="p-3 text-center">Category</th>
+                <th className="p-3 text-center">Status</th>
+                <th className="p-3 text-right">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            {/* TABLE BODY */}
+            <tbody>
+              {filtered.map((p) => (
+                <tr key={p._id} className="border-t hover:bg-gray-50">
+                  <td className="p-4 flex items-center gap-3">
+                    {p.images?.[0] ? (
+                      <img src={p.images[0]} className="w-12 h-12 rounded" />
+                    ) : (
+                      <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
+                        <PhotoIcon className="w-6 text-gray-400" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium">{p.name}</p>
+                      <p className="text-sm text-gray-500">{p.description}</p>
+                    </div>
+                  </td>
+
+                  <td className="p-4 text-center">
+                    {p.varieties?.length || 0}
+                  </td>
+
+                  <td className="p-4 text-center">
+                    {categories.find((c) => c._id === p.category)?.name || "—"}
+                  </td>
+
+                  <td className="p-4 text-center">
+                    <select
+                      value={p.status}
+                      disabled={statusLoading === p._id}
+                      onChange={(e) => updateStatus(p._id, e.target.value)}
+                      className={`px-3 py-1 rounded text-white ${p.status === "available"
+                          ? "bg-green-600"
+                          : "bg-red-600"
+                        }`}
+                    >
+                      <option value="available">Available</option>
+                      <option value="not available">Not Available</option>
+                    </select>
+                  </td>
+
+                  <td className="p-4 flex justify-end gap-2">
+                    <button onClick={() => handleEdit(p)}>
+                      <PencilIcon className="w-5 text-blue-600" />
+                    </button>
+                    <button onClick={() => handleDelete(p._id)}>
+                      <TrashIcon className="w-5 text-red-600" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+
+          </table>
+        </div>
       </div>
+
 
       {/* EDIT MODAL */}
       {editingProduct && (

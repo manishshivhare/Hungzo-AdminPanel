@@ -20,7 +20,7 @@ const Verifications = () => {
           Restaurant Verification
         </button>
 
-        <button
+        {/* <button
           onClick={() => setActiveSection("driver")}
           className={`px-4 py-2 rounded font-medium ${
             activeSection === "driver"
@@ -29,7 +29,7 @@ const Verifications = () => {
           }`}
         >
           Driver Verification
-        </button>
+        </button> */}
       </div>
 
       {/* Sections */}

@@ -152,20 +152,6 @@ const handleSubmit = async (e) => {
             </motion.button>
           </motion.div>
 
-          {/* 🔒 Password Strength
-          {password && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-sm flex items-center gap-2"
-            >
-              <div className={`w-3 h-3 rounded-full ${strength.color}`} />
-              <span className="text-slate-600">
-                Password Strength: <b>{strength.label}</b>
-              </span>
-            </motion.div>
-          )} */}
-
           {/* Login Button */}
           <motion.button
             variants={fieldVariants}

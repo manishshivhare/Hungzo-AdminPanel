@@ -126,7 +126,7 @@ export default function AddProductPage() {
       ]);
       setImages([]);
 
-      setTimeout(() => navigate("/product"), 1200);
+      // setTimeout(() => navigate("/product"), 1200);
     } catch (err) {
       toast.error(err.message || "Server error");
       setMessage({ type: "error", text: err.message });
@@ -137,10 +137,10 @@ export default function AddProductPage() {
 
   /* ================= UI ================= */
   return (
-    <div className="bg-[#FCE8E6] min-h-screen p-10">
+    <div className="bg-[#eaeaea] min-h-screen p-10">
       <div className="mx-auto max-w-lg bg-white rounded-xl shadow">
-        <div className="bg-[#082C2C] text-white text-center py-4 rounded-t-xl">
-          <h2 className="text-2xl font-semibold">Add New Food</h2>
+        <div className="bg-[#141414] text-white text-center py-4 rounded-t-xl">
+          <h2 className="text-2xl font-bold font-sans ">Add New Food</h2>
       
         </div>
 
@@ -220,7 +220,7 @@ export default function AddProductPage() {
                     loadCategories();
                   } else toast.error(res.message);
                 }}
-                className="bg-green-600 text-white px-4 rounded"
+                className="bg-[#0a0b0bde] text-white px-4 rounded"
               >
                 Add
               </button>
@@ -263,7 +263,7 @@ export default function AddProductPage() {
 
           <button
             disabled={loading}
-            className="w-full bg-[#082C2C] text-white py-2 rounded"
+            className="w-full bg-[#0a0b0bde] text-white py-2 rounded"
           >
             {loading ? "Adding..." : "Add Product"}
           </button>

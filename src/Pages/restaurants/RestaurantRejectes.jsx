@@ -3,9 +3,10 @@ import {
   restaurantRejected,
   approveRestaurantReq,
 } from "../../Api";
-import { User, X, MapPin } from "lucide-react";
+import { User, X, MapPin, WalletMinimal } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "../../Context/AuthProvider";
+import { Link } from "react-router-dom";
 
 const RestaurantRejectes = () => {
   const { user } = useAuth();
@@ -131,6 +132,14 @@ const RestaurantRejectes = () => {
                     >
                       <User size={18} />
                     </button>
+                    {console.log(res.owner._id)}
+                    <Link
+                      to={`/wallet/${res.owner._id}`}
+                      className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-100 hover:bg-green-200 text-green-600 transition-colors"
+                      title="View Wallet"
+                    >
+                      <WalletMinimal size={18} />
+                    </Link>
                   </td>
 
                   <td className="px-5 py-4">

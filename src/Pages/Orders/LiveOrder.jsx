@@ -1,333 +1,1032 @@
-
 import React, { useEffect, useRef, useState } from "react";
+import {
+  getAllOrders,
+  getAdminOrders,
+  updateOrderStatus as updateOrderStatusAPI,
+} from "../../Api";
+import toast from "react-hot-toast";
+import { generateInvoice } from "./generateInvoice";
+import { useAuth } from "../../Context/AuthProvider";
 
-// 🔔 sound function
+/* ================= UTILS ================= */
+const formatTime = (iso) =>
+  new Date(iso).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+const POLL_INTERVAL = 60000;
+
+/* ================= 🔔 NOTIFICATION SOUND ================= */
 const playNewOrderSound = () => {
   const audio = new Audio("/Alert.wav");
-  audio.volume = 0.7;
-  audio.play().catch(() => {});
+  audio.volume = 1;
+  audio.currentTime = 0;
+  audio.play().catch(() => { });
 };
 
-// 🍔 DUMMY DATA GENERATOR
-const generateDummyOrders = () => {
-  const statuses = ["New", "Preparing", "Ready"];
-  const itemsList = [
-    "Burger + Fries + Coke",
-    "Pizza Margherita",
-    "Chicken Sandwich Combo",
-    "Caesar Salad",
-    "Sushi Platter",
-    "Pad Thai",
-    "Steak with Mashed Potatoes",
-    "Vegetable Curry with Rice",
-    "Fish and Chips",
-    "Pasta Carbonara"
-  ];
-  
-  const customers = ["John D.", "Sarah M.", "Alex T.", "Maria L.", "James B.", "Emma K."];
-  
-  return Array.from({ length: 8 }, (_, i) => ({
-    id: `ORD${1000 + i}`,
-    items: itemsList[Math.floor(Math.random() * itemsList.length)],
-    customer: customers[Math.floor(Math.random() * customers.length)],
-    status: statuses[Math.floor(Math.random() * 3)],
-    time: `${Math.floor(Math.random() * 30) + 1} min ago`,
-    total: `$${(Math.random() * 50 + 10).toFixed(2)}`
-  }));
-};
-
-const LiveOrder = ({ soundEnabled }) => {
-  const [orders, setOrders] = useState([]);
-  const prevCount = useRef(0);
-  const [isConnected, setIsConnected] = useState(false);
-
-  useEffect(() => {
-    // Simulate initial load
-    setTimeout(() => {
-      const dummyOrders = generateDummyOrders();
-      setOrders(dummyOrders);
-      prevCount.current = dummyOrders.length;
-      setIsConnected(true);
-    }, 500);
-
-    const interval = setInterval(() => {
-      if (Math.random() > 0.7) { 
-        const newOrder = {
-          id: `ORD${1000 + orders.length + 1}`,
-          items: ["Burger + Fries", "Pizza", "Sushi", "Salad"][Math.floor(Math.random() * 4)],
-          customer: ["New Customer", "Returning Guest", "Online Order"][Math.floor(Math.random() * 3)],
-          status: "New",
-          time: "Just now",
-          total: `$${(Math.random() * 40 + 15).toFixed(2)}`
-        };
-        
-        setOrders(prev => {
-          const newOrders = [newOrder, ...prev];
-          
-          if (soundEnabled) {
-            playNewOrderSound();
-          }
-          
-          return newOrders;
-        });
-      }
-    }, 5000); 
-
-    return () => clearInterval(interval);
-  }, [soundEnabled]);
-
-  const updateStatus = (orderId, newStatus) => {
-    setOrders(prevOrders =>
-      prevOrders.map(order =>
-        order.id === orderId
-          ? { ...order, status: newStatus }
-          : order
-      )
-    );
-  };
-
-  const getStatusColor = (status) => {
-    switch(status) {
-      case "New": return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "Preparing": return "bg-blue-100 text-blue-800 border-blue-200";
-      case "Ready": return "bg-green-100 text-green-800 border-green-200";
-      default: return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch(status) {
-      case "New": return "🆕";
-      case "Preparing": return "👨‍🍳";
-      case "Ready": return "✅";
-      default: return "📦";
-    }
-  };
-
-  // Filter orders by status for better organization
-  const newOrders = orders.filter(o => o.status === "New");
-  const preparingOrders = orders.filter(o => o.status === "Preparing");
-  const readyOrders = orders.filter(o => o.status === "Ready");
+/* ================= 🪟 NEW ORDER POPUP ================= */
+const NewOrderPopup = ({ order, onClose }) => {
+  if (!order) return null;
 
   return (
-    <div className="min-h-screen bg- from-gray-50 to-gray-100">
-      {/* STATS BAR */}
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-lg font-bold text-gray-800">Live Orders Dashboard</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Real-time updates from your restaurant
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
-            <span className="text-sm text-gray-600">
-              {isConnected ? `Connected • ${orders.length} orders` : 'Connecting...'}
-            </span>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white w-96 rounded-lg p-5 shadow-xl">
+        <h2 className="text-lg font-bold text-green-600">
+          🛎 New Order Received
+        </h2>
+
+        <div className="mt-3 text-sm space-y-1">
+          <p>
+            <b>Order:</b> {order._id.substring(0, 8)}
+          </p>
+          <p>
+            <b>Total:</b> ₹{order.totalAmount}
+          </p>
+          <p>
+            <b>Customer:</b>{" "}
+            {order.userDetails?.phone || order.userDetails?.email}
+          </p>
+          <p>
+            <b>Time:</b> {formatTime(order.createdAt)}
+          </p>
         </div>
 
-        {/* QUICK STATS */}
-        <div className="grid grid-cols-3 gap-4 mt-1">
-          <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🆕</span>
-              <div className="flex items-center justify-center gap-3">
-                <p className="text-sm text-yellow-700">New Orders</p>
-                <p className="text-2xl font-bold text-yellow-800">{newOrders.length}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">👨‍🍳</span>
-              <div className=" flex items-center justify-center gap-3">
-                <p className="text-sm text-blue-700">Preparing</p>
-                <p className="text-2xl font-bold text-blue-800">{preparingOrders.length}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-green-50 p-3 rounded-lg border border-green-100">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">✅</span>
-              <div className="flex items-center justify-center gap-3">
-                <p className="text-sm text-green-700">Ready</p>
-                <p className="text-2xl font-bold text-green-800">{readyOrders.length}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ORDERS GRID - ORGANIZED BY STATUS */}
-      <div className="space-y-8 h-[65vh] overflow-y-auto">
-        {/* NEW ORDERS SECTION */}
-        {newOrders.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-lg font-bold text-gray-800">🆕 New Orders</h3>
-              <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">
-                {newOrders.length}
-              </span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {newOrders.map((order) => (
-                <OrderCard 
-                  key={order.id} 
-                  order={order} 
-                  updateStatus={updateStatus}
-                  getStatusColor={getStatusColor}
-                  getStatusIcon={getStatusIcon}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* PREPARING ORDERS SECTION */}
-        {preparingOrders.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-lg font-bold text-gray-800">👨‍🍳 Preparing</h3>
-              <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                {preparingOrders.length}
-              </span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {preparingOrders.map((order) => (
-                <OrderCard 
-                  key={order.id} 
-                  order={order} 
-                  updateStatus={updateStatus}
-                  getStatusColor={getStatusColor}
-                  getStatusIcon={getStatusIcon}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* READY ORDERS SECTION */}
-        {readyOrders.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <h3 className="text-lg font-bold text-gray-800">✅ Ready for Pickup</h3>
-              <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-                {readyOrders.length}
-              </span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {readyOrders.map((order) => (
-                <OrderCard 
-                  key={order.id} 
-                  order={order} 
-                  updateStatus={updateStatus}
-                  getStatusColor={getStatusColor}
-                  getStatusIcon={getStatusIcon}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {orders.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-xl shadow-sm">
-            <div className="text-5xl mb-4">🍽️</div>
-            <h3 className="text-xl font-bold text-gray-700 mb-2">No Orders Yet</h3>
-            <p className="text-gray-500">New orders will appear here automatically</p>
-          </div>
-        )}
+        <button
+          onClick={onClose}
+          className="mt-4 w-full bg-green-600 text-white py-2 rounded"
+        >
+          Close
+        </button>
       </div>
     </div>
   );
 };
 
-// ORDER CARD COMPONENT
-const OrderCard = ({ order, updateStatus, getStatusColor, getStatusIcon }) => (
-  <div className="bg-white rounded-xl shadow-sm border hover:shadow-md transition-all duration-300 hover:-translate-y-1">
-    {/* ORDER HEADER */}
-    <div className="p-4 border-b">
-      <div className="flex justify-between items-start">
+/* ================= MAIN COMPONENT ================= */
+const LiveOrderTable = () => {
+  const { user } = useAuth();
+
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  // console.log(orders);
+
+  /* 🔔 notification state */
+  const [popupOrder, setPopupOrder] = useState(null);
+  const lastOrderIdRef = useRef(null);
+
+  /* ================= LOAD ORDERS ================= */
+  const loadOrders = async () => {
+    try {
+      let res;
+
+      if (user?.role === "SUPERADMIN") {
+        res = await getAllOrders();
+      } else if (user?.role === "ADMIN") {
+        res = await getAdminOrders();
+      } else {
+        return;
+      }
+
+      if (!res?.ok) throw new Error();
+
+      const fetchedOrders = res.data.orders || [];
+      setOrders(fetchedOrders);
+
+      /* 🔔 NEW ORDER DETECTION */
+      if (
+        fetchedOrders.length &&
+        lastOrderIdRef.current &&
+        fetchedOrders[0]._id !== lastOrderIdRef.current
+      ) {
+        playNewOrderSound();
+        setPopupOrder(fetchedOrders[0]);
+      }
+
+      if (fetchedOrders.length) {
+        lastOrderIdRef.current = fetchedOrders[0]._id;
+      }
+    } catch (err) {
+      console.error("Load orders failed", err);
+      toast.error("Failed to load orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ================= POLLING ================= */
+  useEffect(() => {
+    if (!user?.role) return;
+
+    loadOrders();
+    const timer = setInterval(loadOrders, POLL_INTERVAL);
+
+    return () => clearInterval(timer);
+  }, [user]);
+
+  /* ================= UPDATE STATUS ================= */
+  const updateStatus = async (orderId, newStatus) => {
+    // ✅ Check if order is already "Out for Delivery"
+    const order = orders.find(o => o._id === orderId);
+    if (order?.orderStatus === "Out for Delivery") {
+      toast.error("Cannot update status once order is out for delivery");
+      return;
+    }
+
+    const previous = orders;
+
+    setOrders((prev) =>
+      prev.map((o) =>
+        o._id === orderId ? { ...o, orderStatus: newStatus } : o
+      )
+    );
+
+    const res = await updateOrderStatusAPI(orderId, newStatus);
+
+    if (!res.ok) {
+      toast.error(res.message || "Failed to update");
+      setOrders(previous);
+      return;
+    }
+
+    toast.success(`Status updated to ${newStatus}`);
+  };
+
+  /* ================= PRINT INVOICE ================= */
+  const handlePrintInvoice = (order) => {
+    try {
+      generateInvoice(order);
+    } catch {
+      toast.error("Failed to generate invoice");
+    }
+  };
+
+  /* ================= STATUS BADGE ================= */
+  const badge = (status) => {
+    const base = "px-2 py-1 rounded-full text-xs font-semibold";
+    switch (status) {
+      case "Pending":
+        return `${base} bg-yellow-100 text-yellow-800`;
+      case "Accepted":
+        return `${base} bg-purple-100 text-purple-800`;
+      case "Preparing":
+        return `${base} bg-blue-100 text-blue-800`;
+      case "Out for Delivery":
+        return `${base} bg-orange-100 text-orange-800`;
+      case "Delivered":
+        return `${base} bg-green-100 text-green-800`;
+      case "Cancelled":
+        return `${base} bg-red-100 text-red-800`;
+      default:
+        return base;
+    }
+  };
+
+  /* ================= ✅ UI FILTER (ONLY CHANGE) ================= */
+  const visibleOrders = orders.filter(
+    (order) =>
+      order.orderStatus !== "Delivered" &&
+      order.orderStatus !== "Cancelled"
+  );
+
+  if (loading) {
+    return (
+      <div className="p-6 text-center text-gray-500">
+        Loading orders...
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="bg-white rounded-lg shadow border overflow-hidden">
+        <div className="p-4 border-b">
+          <h2 className="font-bold text-lg">Live Orders</h2>
+          <p className="text-sm text-gray-500">
+            Logged in as <strong>{user?.role}</strong>
+          </p>
+        </div>
+
+        <div className="overflow-y-auto h-[74vh]">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-3 text-left">Order ID</th>
+                <th className="p-3 text-left">Customer</th>
+                <th className="p-3 text-center">Total</th>
+                <th className="p-3">Time</th>
+                <th className="p-3">Status</th>
+                <th className="p-3 text-center">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y">
+              {visibleOrders.length === 0 && (
+                <tr>
+                  <td colSpan="6" className="p-6 text-center text-gray-500">
+                    No active orders
+                  </td>
+                </tr>
+              )}
+
+              {visibleOrders.map((order) => {
+                // ✅ Check if order can be updated (not "Out for Delivery")
+                const canUpdate = order.orderStatus !== "Out for Delivery";
+
+                const canCancel =
+                  (order.orderStatus === "Pending" ||
+                    order.orderStatus === "Accepted") && canUpdate;
+
+                return (
+                  <tr
+                    key={order._id}
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => setSelectedOrder(order)}
+                  >
+                    <td className="p-3 font-medium">
+                      {order._id.substring(0, 8)}...
+                    </td>
+                    <td className="p-3">
+                      {order.userDetails?.phone ||
+                        order.userDetails?.email}
+                    </td>
+                    <td className="p-3 font-semibold text-center">
+                      ₹{order.totalAmount}
+                    </td>
+                    <td className="p-3 text-xs text-gray-500 text-center">
+                      {formatTime(order.createdAt)}
+                    </td>
+                    <td className="p-3 text-center">
+                      <span className={badge(order.orderStatus)}>
+                        {order.orderStatus}
+                      </span>
+                    </td>
+
+                    <td
+                      className="p-3 space-y-1 text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {/* ✅ "Out for Delivery" orders show no action buttons */}
+                      {order.orderStatus === "Out for Delivery" ? (
+                        <div className="text-xs text-gray-500 py-1">
+                          Status Locked
+                        </div>
+                      ) : (
+                        <>
+                          {order.orderStatus === "Pending" && (
+                            <button
+                              onClick={() =>
+                                updateStatus(order._id, "Accepted")
+                              }
+                              className="block w-full bg-yellow-500 text-white text-xs py-1 rounded"
+                            >
+                              Accept
+                            </button>
+                          )}
+
+                          {order.orderStatus === "Accepted" && (
+                            <button
+                              onClick={() =>
+                                updateStatus(order._id, "Preparing")
+                              }
+                              className="block w-full bg-blue-500 text-white text-xs py-1 rounded"
+                            >
+                              Prepare
+                            </button>
+                          )}
+
+                          {order.orderStatus === "Preparing" && (
+                            <button
+                              onClick={() =>
+                                updateStatus(
+                                  order._id,
+                                  "Out for Delivery"
+                                )
+                              }
+                              className="block w-full bg-orange-500 text-white text-xs py-1 rounded"
+                            >
+                              Dispatch
+                            </button>
+                          )}
+
+                          {canCancel && (
+                            <button
+                              onClick={() => {
+                                if (
+                                  !window.confirm("Cancel this order?")
+                                )
+                                  return;
+                                updateStatus(order._id, "Cancelled");
+                              }}
+                              className="block w-full bg-red-500 text-white text-xs py-1 rounded"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {selectedOrder && (
+        <OrderDetailsModal
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          onPrintInvoice={handlePrintInvoice}
+        />
+      )}
+
+      <NewOrderPopup
+        order={popupOrder}
+        onClose={() => setPopupOrder(null)}
+      />
+    </>
+  );
+};
+
+/* ================= MODAL ================= */
+const OrderDetailsModal = ({ order, onClose, onPrintInvoice }) => (
+  <div
+    className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+    onClick={onClose}
+  >
+    <div
+      className="bg-white/90 w-full max-w-4xl rounded-lg shadow-lg overflow-hidden"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* HEADER */}
+      <div className="flex justify-between items-center p-4 border-b">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-500">#</span>
-            <h3 className="font-bold text-gray-800">{order.id}</h3>
-          </div>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-gray-500">👤</span>
-            <span className="text-sm text-gray-700">{order.customer}</span>
-          </div>
+          <h2 className="font-bold text-lg">
+            Order #{order._id.substring(0, 8)}
+          </h2>
+          <p className="text-xs text-gray-500">
+            {new Date(order.createdAt).toLocaleString()}
+          </p>
         </div>
-        
-        <span className={`px-3 py-1 text-xs rounded-full font-medium border ${getStatusColor(order.status)}`}>
-          {getStatusIcon(order.status)} {order.status}
-        </span>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => onPrintInvoice(order)}
+            className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+          >
+            Print Invoice
+          </button>
+          <button onClick={onClose}>✕</button>
+        </div>
       </div>
 
-      {/* ORDER TIME */}
-      <div className="mt-3 flex items-center text-xs text-gray-500">
-        <span>🕒 {order.time}</span>
-        <span className="mx-2">•</span>
-        <span className="font-medium text-gray-700">{order.total}</span>
-      </div>
-    </div>
+      {/* CUSTOMER + ORDER INFO */}
+      <div className="p-4 grid grid-cols-2 gap-4 text-sm border-b">
+        <div className="space-y-1">
+          <p>
+            <strong>Status:</strong> {order.orderStatus}
+          </p>
+          <p>
+            <strong>Payment:</strong> {order.paymentMethod} (
+            {order.paymentStatus})
+          </p>
+          <p>
+            <strong>Razorpay ID:</strong> {order.razorpayOrderId}
+          </p>
+        </div>
 
-    {/* ORDER ITEMS */}
-    <div className="p-4">
-      <div className="flex items-start gap-3">
-        <div className="bg-gray-100 p-2 rounded-lg">
-          <span className="text-lg">🍔</span>
-        </div>
-        <div className="flex-1">
-          <p className="text-sm text-gray-800 font-medium">{order.items}</p>
-          <p className="text-xs text-gray-500 mt-1">1x items</p>
+        <div className="space-y-1">
+          <p>
+            <strong>Customer:</strong>{" "}
+            {order.userDetails?.phone || "N/A"}
+          </p>
+          <p>
+            <strong>Customer:</strong>{" "}
+            {order.userDetails?.name || "******"}
+          </p>
+          <p>
+            <strong>Address:</strong> {order.shippingAddress}
+          </p>
         </div>
       </div>
-    </div>
 
-    {/* ACTIONS */}
-    <div className="p-4 border-t bg-gray-50 rounded-b-xl">
-      {order.status === "New" && (
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => updateStatus(order.id, "Preparing")}
-            className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-3 text-sm rounded-lg font-medium transition-colors flex items-center justify-center gap-1"
-          >
-            <span>👨‍🍳</span> Start Prep
-          </button>
-          <button
-            onClick={() => updateStatus(order.id, "Ready")}
-            className="bg-green-500 hover:bg-green-600 text-white py-2 px-3 text-sm rounded-lg font-medium transition-colors flex items-center justify-center gap-1"
-          >
-            <span>⚡</span> Mark Ready
-          </button>
+      {/* ITEMS */}
+      <div className="p-3 border-b">
+        <h3 className="font-semibold mb-3">Order Items</h3>
+
+        <div className="space-y-1 h-43 overflow-y-auto">
+          {order.items.map((item) => (
+            <div
+              key={item._id}
+              className="flex gap-4 border rounded-lg p-3"
+            >
+              {/* IMAGE */}
+              <img
+                src={item.product?.images?.[0]}
+                alt={item.productName}
+                className="w-20 h-20 object-cover rounded border"
+              />
+
+              {/* DETAILS */}
+              <div className="flex-1 text-sm space-y-1">
+                <p className="font-semibold text-base">
+                  {item.productName}
+                </p>
+                <p className="text-gray-500">
+                  Variety: {item.varietyName}
+                </p>
+                <p className="text-gray-500">
+                  Price: ₹{item.price}
+                </p>
+                <p className="text-gray-500">
+                  Quantity: {item.quantity}
+                </p>
+              </div>
+
+              <div className="font-semibold text-right">
+                ₹{item.total}
+              </div>
+            </div>
+          ))}
         </div>
-      )}
-      
-      {order.status === "Preparing" && (
-        <button
-          onClick={() => updateStatus(order.id, "Ready")}
-          className="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-3 text-sm rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-        >
-          <span>✅</span> Mark as Ready
-          <span className="text-xs opacity-90">({order.time})</span>
-        </button>
-      )}
-      
-      {order.status === "Ready" && (
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-green-700 font-medium">✅ Ready for pickup</span>
-          <button
-            onClick={() => updateStatus(order.id, "New")}
-            className="text-xs text-gray-500 hover:text-gray-700"
-          >
-            Re-open
-          </button>
+      </div>
+
+      {/* BILL SUMMARY */}
+      <div className="p-4 text-sm space-y-1">
+        <div className="flex justify-between">
+          <span>Subtotal</span>
+          <span>₹{order.subTotal}</span>
         </div>
-      )}
+           <div className="flex justify-between">
+          <span>PlatformFee</span>
+          <span>₹{order.platformFee}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>GST</span>
+          <span>₹{order.gstAmount}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Delivery</span>
+          <span>₹{order.deliveryCharge}</span>
+        </div>
+
+        <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
+          <span>Total</span>
+          <span>₹{order.totalAmount}</span>
+        </div>
+      </div>
     </div>
   </div>
 );
 
-export default LiveOrder;
+export default LiveOrderTable;
+
+// import React, { useEffect, useRef, useState } from "react";
+// import {
+//   getAllOrders,
+//   getAdminOrders,
+//   updateOrderStatus as updateOrderStatusAPI,
+// } from "../../Api";
+// import toast from "react-hot-toast";
+// import { generateInvoice } from "./generateInvoice";
+// import { useAuth } from "../../Context/AuthProvider";
+
+// /* ================= UTILS ================= */
+// const formatTime = (iso) =>
+//   new Date(iso).toLocaleTimeString([], {
+//     hour: "2-digit",
+//     minute: "2-digit",
+//   });
+
+// const POLL_INTERVAL = 60000;
+
+// /* ================= 🔔 NOTIFICATION SOUND ================= */
+// const playNewOrderSound = () => {
+//   const audio = new Audio("/Alert.wav");
+//   audio.volume = 1;
+//   audio.currentTime = 0;
+//   audio.play().catch(() => { });
+// };
+
+// /* ================= 🪟 NEW ORDER POPUP ================= */
+// const NewOrderPopup = ({ order, onClose }) => {
+//   if (!order) return null;
+
+//   return (
+//     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+//       <div className="bg-white w-96 rounded-lg p-5 shadow-xl">
+//         <h2 className="text-lg font-bold text-green-600">
+//           🛎 New Order Received
+//         </h2>
+
+//         <div className="mt-3 text-sm space-y-1">
+//           <p>
+//             <b>Order:</b> {order._id?.substring(0, 8)}
+//           </p>
+//           <p>
+//             <b>Total:</b> ₹{order.totalAmount}
+//           </p>
+//           <p>
+//             <b>Customer:</b>{" "}
+//             {order.userDetails?.phone || order.userDetails?.email}
+//           </p>
+//           <p>
+//             <b>Time:</b> {formatTime(order.createdAt)}
+//           </p>
+//         </div>
+
+//         <button
+//           onClick={onClose}
+//           className="mt-4 w-full bg-green-600 text-white py-2 rounded"
+//         >
+//           Close
+//         </button>
+//       </div>
+//     </div>
+//   );
+// };
+
+// /* ================= MAIN COMPONENT ================= */
+// const LiveOrderTable = () => {
+//   const { user } = useAuth();
+
+//   const [orders, setOrders] = useState([]);
+//   const [loading, setLoading] = useState(true);
+//   const [selectedOrder, setSelectedOrder] = useState(null);
+//   console.log("Orders:", orders);
+
+//   /* 🔔 notification state */
+//   const [popupOrder, setPopupOrder] = useState(null);
+//   const lastOrderIdRef = useRef(null);
+
+//   /* ================= LOAD ORDERS ================= */
+//   const loadOrders = async () => {
+//     try {
+//       let res;
+
+//       if (user?.role === "SUPERADMIN") {
+//         res = await getAllOrders();
+//       } else if (user?.role === "ADMIN") {
+//         res = await getAdminOrders();
+//       } else {
+//         return;
+//       }
+
+//       if (!res?.ok) throw new Error("API response not ok");
+//       let fetchedOrders = [];
+
+//       if (Array.isArray(res.data)) {
+//         // Case 1: API returns array directly
+//         fetchedOrders = res.data;
+//       } else if (Array.isArray(res.data?.orders)) {
+//         // Case 2: API returns { orders: [...] }
+//         fetchedOrders = res.data.orders;
+//       } else if (res.data && typeof res.data === 'object') {
+//         // Case 3: API returns object with numeric keys (like your data example)
+//         // Check if it has numeric keys
+//         const keys = Object.keys(res.data);
+//         const hasNumericKeys = keys.some(key => !isNaN(key) && key !== "__v");
+        
+//         if (hasNumericKeys) {
+//           // Convert object with numeric keys to array
+//           fetchedOrders = Object.values(res.data).filter(item =>
+//             item && typeof item === 'object' && item._id
+//           );
+//         } else if (res.data.orders && typeof res.data.orders === 'object') {
+//           const ordersObj = res.data.orders;
+//           fetchedOrders = Object.values(ordersObj).filter(item =>
+//             item && typeof item === 'object' && item._id
+//           );
+//         }
+//       }
+
+
+//       if (fetchedOrders.length > 0) {
+//         // Log statuses for debugging
+//         fetchedOrders.forEach((order, index) => {
+//           // console.log(`Order ${index}: ID=${order._id?.substring(0, 8)}, Status=${order.orderStatus}, Time=${order.createdAt}`);
+//         });
+//       }
+
+//       setOrders(fetchedOrders);
+
+//       /* 🔔 NEW ORDER DETECTION */
+//       if (
+//         fetchedOrders.length &&
+//         lastOrderIdRef.current &&
+//         fetchedOrders[0]._id !== lastOrderIdRef.current
+//       ) {
+//         playNewOrderSound();
+//         setPopupOrder(fetchedOrders[0]);
+//       }
+
+//       if (fetchedOrders.length) {
+//         lastOrderIdRef.current = fetchedOrders[0]._id;
+//       }
+//     } catch (err) {
+//       console.error("Load orders failed", err);
+//       toast.error("Failed to load orders");
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   /* ================= POLLING ================= */
+//   useEffect(() => {
+//     if (!user?.role) return;
+
+//     loadOrders();
+//     const timer = setInterval(loadOrders, POLL_INTERVAL);
+
+//     return () => clearInterval(timer);
+//   }, [user]);
+
+//   /* ================= UPDATE STATUS ================= */
+//   const updateStatus = async (orderId, newStatus) => {
+//     // ✅ Check if order is already "Out for Delivery"
+//     const order = orders.find(o => o._id === orderId);
+
+//     if (order?.orderStatus === "Out for Delivery") {
+//       toast.error("Cannot update status once order is out for delivery");
+//       return;
+//     }
+
+//     const previous = orders;
+
+//     // Optimistically update UI
+//     setOrders((prev) =>
+//       prev.map((o) =>
+//         o._id === orderId ? { ...o, orderStatus: newStatus } : o
+//       )
+//     );
+
+//     // Call API
+//     const res = await updateOrderStatusAPI(orderId, newStatus);
+    
+
+//     if (!res.ok) {
+//       toast.error(res.message || "Failed to update");
+//       setOrders(previous);
+//       return;
+//     }
+
+//     toast.success(`Status updated to ${newStatus}`);
+    
+//     // Optionally refresh orders
+//     setTimeout(() => {
+//       loadOrders();
+//     }, 1000);
+//   };
+
+//   /* ================= PRINT INVOICE ================= */
+//   const handlePrintInvoice = (order) => {
+//     try {
+//       generateInvoice(order);
+//     } catch {
+//       toast.error("Failed to generate invoice");
+//     }
+//   };
+
+//   /* ================= STATUS BADGE ================= */
+//   const badge = (status) => {
+//     const base = "px-2 py-1 rounded-full text-xs font-semibold";
+    
+//     // Normalize status string
+//     const normalizedStatus = status?.trim() || "Pending";
+    
+//     console.log("Badge for status:", status, "Normalized:", normalizedStatus);
+    
+//     switch (normalizedStatus) {
+//       case "Pending":
+//         return `${base} bg-yellow-100 text-yellow-800`;
+//       case "Accepted":
+//         return `${base} bg-purple-100 text-purple-800`;
+//       case "Preparing":
+//         return `${base} bg-blue-100 text-blue-800`;
+//       case "Out for Delivery":
+//       case "Out for delivery": // Handle case variations
+//         return `${base} bg-orange-100 text-orange-800`;
+//       case "Delivered":
+//         return `${base} bg-green-100 text-green-800`;
+//       case "Cancelled":
+//         return `${base} bg-red-100 text-red-800`;
+//       default:
+//         return `${base} bg-gray-100 text-gray-800`;
+//     }
+//   };
+
+//   /* ================= ✅ UI FILTER (ONLY CHANGE) ================= */
+//   // Show orders that are NOT Delivered or Cancelled
+//   const visibleOrders = orders.filter(
+//     (order) => {
+//       const status = order.orderStatus?.trim();
+//       return status !== "Delivered" && status !== "Cancelled";
+//     }
+//   );
+
+//   // Debug: Log visible orders
+//   console.log("Visible orders count:", visibleOrders.length);
+//   visibleOrders.forEach((order, index) => {
+//     console.log(`Visible ${index}: ID=${order._id?.substring(0, 8)}, Status="${order.orderStatus}"`);
+//   });
+
+//   if (loading) {
+//     return (
+//       <div className="p-6 text-center text-gray-500">
+//         Loading orders...
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <>
+//       <div className="bg-white rounded-lg shadow border overflow-hidden">
+//         <div className="p-4 border-b">
+//           <h2 className="font-bold text-lg">Live Orders</h2>
+//           <p className="text-sm text-gray-500">
+//             Logged in as <strong>{user?.role}</strong>
+//           </p>
+//           {/* Debug info - you can remove this later */}
+//           <div className="text-xs text-gray-400 mt-1">
+//             Total: {orders.length} orders | Showing: {visibleOrders.length} active orders
+//           </div>
+//         </div>
+
+//         <div className="overflow-y-auto h-[74vh]">
+//           <table className="w-full text-sm">
+//             <thead className="bg-gray-100">
+//               <tr>
+//                 <th className="p-3 text-left">Order ID</th>
+//                 <th className="p-3 text-left">Customer</th>
+//                 <th className="p-3 text-center">Total</th>
+//                 <th className="p-3">Time</th>
+//                 <th className="p-3">Status</th>
+//                 <th className="p-3 text-center">Actions</th>
+//               </tr>
+//             </thead>
+
+//             <tbody className="divide-y">
+//               {visibleOrders.length === 0 && (
+//                 <tr>
+//                   <td colSpan="6" className="p-6 text-center text-gray-500">
+//                     No active orders
+//                   </td>
+//                 </tr>
+//               )}
+
+//               {visibleOrders.map((order) => {
+             
+//                 const normalizedStatus = order.orderStatus?.trim();
+//                 const isOutForDelivery = normalizedStatus === "Out for Delivery" || normalizedStatus === "Out for delivery";
+                
+//                 const canUpdate = !isOutForDelivery;
+
+//                 const canCancel =
+//                   (normalizedStatus === "Pending" ||
+//                     normalizedStatus === "Accepted") && canUpdate;
+
+//                 return (
+//                   <tr
+//                     key={order._id}
+//                     className="hover:bg-gray-50 cursor-pointer"
+//                     onClick={() => setSelectedOrder(order)}
+//                   >
+//                     <td className="p-3 font-medium">
+//                       {order._id?.substring(0, 8)}...
+//                     </td>
+//                     <td className="p-3">
+//                       {order.userDetails?.phone ||
+//                         order.userDetails?.email}
+//                     </td>
+//                     <td className="p-3 font-semibold text-center">
+//                       ₹{order.totalAmount}
+//                     </td>
+//                     <td className="p-3 text-xs text-gray-500 text-center">
+//                       {formatTime(order.createdAt)}
+//                     </td>
+//                     <td className="p-3 text-center">
+//                       <span className={badge(order.orderStatus)}>
+//                         {order.orderStatus}
+//                       </span>
+//                     </td>
+
+//                     <td
+//                       className="p-3 space-y-1 text-center"
+//                       onClick={(e) => e.stopPropagation()}
+//                     >
+//                       {/* ✅ "Out for Delivery" orders show no action buttons */}
+//                       {isOutForDelivery ? (
+//                         <div className="text-xs text-gray-500 py-1">
+//                           Status Locked
+//                         </div>
+//                       ) : (
+//                         <>
+//                           {normalizedStatus === "Pending" && (
+//                             <button
+//                               onClick={() =>
+//                                 updateStatus(order._id, "Accepted")
+//                               }
+//                               className="block w-full bg-yellow-500 text-white text-xs py-1 rounded"
+//                             >
+//                               Accept
+//                             </button>
+//                           )}
+
+//                           {normalizedStatus === "Accepted" && (
+//                             <button
+//                               onClick={() =>
+//                                 updateStatus(order._id, "Preparing")
+//                               }
+//                               className="block w-full bg-blue-500 text-white text-xs py-1 rounded"
+//                             >
+//                               Prepare
+//                             </button>
+//                           )}
+
+//                           {normalizedStatus === "Preparing" && (
+//                             <button
+//                               onClick={() =>
+//                                 updateStatus(
+//                                   order._id,
+//                                   "Out for Delivery"
+//                                 )
+//                               }
+//                               className="block w-full bg-orange-500 text-white text-xs py-1 rounded"
+//                             >
+//                               Dispatch
+//                             </button>
+//                           )}
+
+//                           {canCancel && (
+//                             <button
+//                               onClick={() => {
+//                                 if (
+//                                   !window.confirm("Cancel this order?")
+//                                 )
+//                                   return;
+//                                 updateStatus(order._id, "Cancelled");
+//                               }}
+//                               className="block w-full bg-red-500 text-white text-xs py-1 rounded"
+//                             >
+//                               Cancel
+//                             </button>
+//                           )}
+//                         </>
+//                       )}
+//                     </td>
+//                   </tr>
+//                 );
+//               })}
+//             </tbody>
+//           </table>
+//         </div>
+//       </div>
+
+//       {selectedOrder && (
+//         <OrderDetailsModal
+//           order={selectedOrder}
+//           onClose={() => setSelectedOrder(null)}
+//           onPrintInvoice={handlePrintInvoice}
+//         />
+//       )}
+
+//       <NewOrderPopup
+//         order={popupOrder}
+//         onClose={() => setPopupOrder(null)}
+//       />
+//     </>
+//   );
+// };
+
+// /* ================= MODAL ================= */
+// const OrderDetailsModal = ({ order, onClose, onPrintInvoice }) => (
+//   <div
+//     className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+//     onClick={onClose}
+//   >
+//     <div
+//       className="bg-white/90 w-full max-w-4xl rounded-lg shadow-lg overflow-hidden"
+//       onClick={(e) => e.stopPropagation()}
+//     >
+//       {/* HEADER */}
+//       <div className="flex justify-between items-center p-4 border-b">
+//         <div>
+//           <h2 className="font-bold text-lg">
+//             Order #{order._id?.substring(0, 8)}
+//           </h2>
+//           <p className="text-xs text-gray-500">
+//             {new Date(order.createdAt).toLocaleString()}
+//           </p>
+//         </div>
+
+//         <div className="flex gap-2">
+//           <button
+//             onClick={() => onPrintInvoice(order)}
+//             className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+//           >
+//             Print Invoice
+//           </button>
+//           <button onClick={onClose}>✕</button>
+//         </div>
+//       </div>
+
+//       {/* CUSTOMER + ORDER INFO */}
+//       <div className="p-4 grid grid-cols-2 gap-4 text-sm border-b">
+//         <div className="space-y-1">
+//           <p>
+//             <strong>Status:</strong> {order.orderStatus}
+//           </p>
+//           <p>
+//             <strong>Payment:</strong> {order.paymentMethod} (
+//             {order.paymentStatus})
+//           </p>
+//           <p>
+//             <strong>Razorpay ID:</strong> {order.razorpayOrderId || "N/A"}
+//           </p>
+//         </div>
+
+//         <div className="space-y-1">
+//           <p>
+//             <strong>Customer Phone:</strong>{" "}
+//             {order.userDetails?.phone || "N/A"}
+//           </p>
+//           <p>
+//             <strong>Customer Name:</strong>{" "}
+//             {order.userDetails?.name || "******"}
+//           </p>
+//           <p>
+//             <strong>Address:</strong> {order.shippingAddress}
+//           </p>
+//         </div>
+//       </div>
+
+//       {/* ITEMS */}
+//       <div className="p-3 border-b">
+//         <h3 className="font-semibold mb-3">Order Items</h3>
+
+//         <div className="space-y-1 h-43 overflow-y-auto">
+//           {order.items?.map((item) => (
+//             <div
+//               key={item._id}
+//               className="flex gap-4 border rounded-lg p-3"
+//             >
+//               {/* IMAGE */}
+//               <img
+//                 src={item.product?.images?.[0]}
+//                 alt={item.productName}
+//                 className="w-20 h-20 object-cover rounded border"
+//               />
+
+//               {/* DETAILS */}
+//               <div className="flex-1 text-sm space-y-1">
+//                 <p className="font-semibold text-base">
+//                   {item.productName}
+//                 </p>
+//                 <p className="text-gray-500">
+//                   Variety: {item.varietyName}
+//                 </p>
+//                 <p className="text-gray-500">
+//                   Price: ₹{item.price}
+//                 </p>
+//                 <p className="text-gray-500">
+//                   Quantity: {item.quantity}
+//                 </p>
+//               </div>
+
+//               <div className="font-semibold text-right">
+//                 ₹{item.total}
+//               </div>
+//             </div>
+//           ))}
+//         </div>
+//       </div>
+
+//       {/* BILL SUMMARY */}
+//       <div className="p-4 text-sm space-y-1">
+//         <div className="flex justify-between">
+//           <span>Subtotal</span>
+//           <span>₹{order.subTotal}</span>
+//         </div>
+//         <div className="flex justify-between">
+//           <span>GST</span>
+//           <span>₹{order.gstAmount}</span>
+
+//         </div>
+//         <div className="flex justify-between">
+//           <span>Delivery</span>
+//           <span>₹{order.deliveryCharge}</span>
+//         </div>
+
+//         <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
+//           <span>Total</span>
+//           <span>₹{order.totalAmount}</span>
+//         </div>
+//       </div>
+//     </div>
+//   </div>
+// );
+
+// export default LiveOrderTable;

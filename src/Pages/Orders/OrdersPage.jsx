@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import LiveOrder from "./LiveOrder";
 import OrderHistory from "./OrderHistory";
-import Transaction from "./Transaction";
-import Dashboard from "./AnalyticsDashboard";
 import { useAuth } from "../../Context/AuthProvider";
+import OrderReturn from "./OrderReturn";
 
 /* 🔔 Sound */
 const playNewOrderSound = () => {
@@ -13,15 +12,11 @@ const playNewOrderSound = () => {
 };
 
 const OrdersPage = () => {
-  /* ✅ ALWAYS CALL HOOKS FIRST */
   const { user } = useAuth();
 
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [activeTab, setActiveTab] = useState("live");
 
-  // console.log("AUTH USER 👉", user);
-
-  /* ✅ WAIT UNTIL USER IS LOADED */
   if (!user) {
     return (
       <div className="p-6 text-gray-500">
@@ -39,33 +34,29 @@ const OrdersPage = () => {
 
           {/* ================= TABS ================= */}
           <div className="flex gap-3 mt-2">
-            {/* <TabButton
+            <TabButton
               active={activeTab === "live"}
               onClick={() => setActiveTab("live")}
               label="Live Orders"
-            /> */}
+            />
 
             <TabButton
               active={activeTab === "history"}
               onClick={() => setActiveTab("history")}
               label="Order History"
             />
-
-     
-
-            {/* 🔐 SUPERADMIN ONLY */}
-            {user.role === "SUPERADMIN" && (
-              <TabButton
-                active={activeTab === "payments"}
-                onClick={() => setActiveTab("payments")}
-                label="💳 Payments"
-              />
-            )}
+            
+            {/* FIXED: Changed from "Return" to "return" to match state */}
+            <TabButton
+              active={activeTab === "return"}
+              onClick={() => setActiveTab("return")}
+              label="Order Return"
+            />
           </div>
         </div>
 
         {/* 🔔 SOUND TOGGLE (OPTIONAL) */}
-        {/* 
+        
         <button
           onClick={() => {
             setSoundEnabled((prev) => !prev);
@@ -79,29 +70,17 @@ const OrdersPage = () => {
         >
           🔔 Sound {soundEnabled ? "On" : "Off"}
         </button>
-        */}
+       
       </header>
 
       {/* ================= CONTENT ================= */}
-      <div className="p-2">
+      <div className="px-2">
         {activeTab === "live" && (
           <LiveOrder soundEnabled={soundEnabled} />
         )}
 
         {activeTab === "history" && <OrderHistory />}
-
-        {activeTab === "analytics" && <Dashboard />}
-
-        {/* 🔒 HARD ROLE PROTECTION */}
-        {activeTab === "payments" && user.role === "SUPERADMIN" && (
-          <Transaction />
-        )}
-
-        {activeTab === "payments" && user.role !== "SUPERADMIN" && (
-          <div className="p-6 text-red-600 font-semibold">
-            🚫 Unauthorized Access
-          </div>
-        )}
+        {activeTab === "return" && <OrderReturn />}
       </div>
     </>
   );

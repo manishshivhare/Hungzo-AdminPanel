@@ -20,7 +20,7 @@ export default API;
 // ================= create ADMINS ==================
 export async function createAdmin(formData) {
   try {
-    const res = await API.post("/admin/create", formData); 
+    const res = await API.post("/admin/create", formData);
     return { ok: true, data: res.data };
   } catch (error) {
     return {
@@ -402,6 +402,7 @@ export async function getAdminOrders() {
   }
 }
 
+
 /* ================= GET ALL ORDERS (SUPERADMIN) ================= */
 export async function getAllOrders() {
   try {
@@ -438,6 +439,192 @@ export async function getOrderById(orderId) {
     return {
       ok: false,
       message: error.response?.data?.message || "Failed to fetch order",
+    };
+  }
+}
+
+
+/* ================= GET ADMIN RETURN ORDERS ================= */
+export async function getReturnOrders() {
+  try {
+    const res = await API.get("/returns/admin/all");
+    console.log(res);
+    
+    return { ok: true, data: res.data };
+  } catch (error) {
+    console.error(
+      "Error fetching return orders:",
+      error.response?.data || error.message
+    );
+
+    return {
+      ok: false,
+      error: error.response?.data || {
+        message: "Failed to fetch return orders",
+      },
+    };
+  }
+}
+
+/* ================= APPROVE / REJECT RETURN REQUEST ================= */
+export async function updateReturnStatus(returnId, status, adminRemark = "") {
+  try {
+    const res = await API.put(`/returns/${returnId}`, {
+      status,
+      adminRemark,
+    });
+
+    return { ok: true, data: res.data };
+  } catch (error) {
+    console.error(
+      "Update Return Status Error:",
+      error.response?.data || error.message
+    );
+
+    return {
+      ok: false,
+      error: error.response?.data || {
+        message: "Failed to update return status",
+      },
+    };
+  }
+}
+
+
+
+// ================= Banner ==================
+// ================= create Banner ==================
+export async function createBanner(formData) {
+  try {
+    const config = {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    };
+
+    const res = await API.post("/banners/create", formData, config);
+    return { ok: true, data: res.data };
+  } catch (error) {
+    console.error("Create banner error:", error);
+    console.error("Error response:", error.response?.data);
+
+    return {
+      ok: false,
+      message: error.response?.data?.message || error.response?.data?.error || "Failed to create banner",
+      error: error.response?.data,
+    };
+  }
+}
+// =================get  BannerLIST ==================
+
+export async function BannersList() {
+  try {
+    const res = await API.get("/banners/all");
+    // console.log(res.data);
+    return res.data;
+  }
+  catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message ||
+        "Failed to fetch Driver list",
+    };
+  }
+}
+/* ================= DELETE Banner ================= */
+export async function DeleteBanner(id) {
+  try {
+    const res = await API.delete(`/banners/delete/${id}`);
+    return { ok: true, data: res.data };
+  } catch (error) {
+    console.error("Delete Product Error:", error.response?.data || error.message);
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to delete product",
+    };
+  }
+}
+
+/* ================= UPDATE Banner ================= */
+
+export async function updateBanner(id, formData) {
+  try {
+    const res = await API.put(
+      `/banners/update/${id}`,
+      formData
+    );
+
+    return { ok: true, data: res.data };
+  } catch (error) {
+    console.error(
+      "Update Banner Error:",
+      error.response?.data || error.message
+    );
+
+    return {
+      ok: false,
+      message: error.response?.data?.message || "Failed to update banner",
+    };
+  }
+}
+
+
+//  ////////// Wallet ////////
+// =================get  Wallet LIST ==================
+
+export async function WalletList() {
+  try {
+    const res = await API.get("/wallet/admin/all");
+
+    return res.data;
+  }
+  catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message ||
+        "Failed to fetch Wallet list",
+    };
+  }
+}
+
+// ================= USER TRANSACTIONS WITH PAGINATION ==================
+export async function getUserTransactions(userId, page = 1, limit = 20) {
+  try {
+    const res = await API.get(`/wallet/admin/user/${userId}/transactions`, {
+      params: {
+        page,
+        limit
+      }
+    });
+    return { ok: true, data: res.data };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to fetch user transactions",
+    };
+  }
+}
+
+// ================= ALTERNATIVE VERSION WITH FLEXIBLE PARAMS ==================
+export async function getUserTransactionsWithParams(userId, params = {}) {
+  try {
+    const res = await API.get(`/wallet/admin/user/${userId}/transactions`, {
+      params: {
+        page: params.page || 1,
+        limit: params.limit || 20,
+        ...params
+      }
+    });
+    return { ok: true, data: res.data };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to fetch user transactions",
     };
   }
 }

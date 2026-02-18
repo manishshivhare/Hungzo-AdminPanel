@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../Context/AuthProvider";
-import { getAllOrders } from "../../Api";
+import { getAllOrders, getAdminOrders } from "../../Api";
+import { generateInvoice } from "./generateInvoice";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import jsPDF from "jspdf";
-import Logo from "../../assets/Logo.png";
+
 /* ================= HELPERS ================= */
 const formatDate = (iso) =>
   new Date(iso).toISOString().split("T")[0];
@@ -41,6 +41,69 @@ const getStatusIcon = (status) => {
 const getPaymentColor = (method) =>
   method === "COD" ? "text-orange-600" : "text-green-600";
 
+/* ================= CSV EXPORT HELPERS ================= */
+const convertToCSV = (data) => {
+  const headers = [
+    "Order ID",
+    "Customer Email",
+    "Order Items",
+    "Status",
+    "Date",
+    "Time",
+    "Total Amount (₹)",
+    "Payment Method",
+    "Sub Total (₹)",
+    "GST Amount (₹)",
+    "Delivery Charge (₹)",
+    "Order Status",
+    "Payment Status",
+    "Shipping Address",
+    "Created At"
+  ];
+
+  const rows = data.map(order => [
+    order.id,
+    order.customer,
+    `"${order.items.replace(/"/g, '""')}"`, // Wrap in quotes and escape existing quotes
+    order.status,
+    order.date,
+    order.time,
+    order.total.replace("₹", ""),
+    order.payment,
+    order.raw.subTotal || 0,
+    order.raw.gstAmount || 0,
+    order.raw.deliveryCharge || 0,
+    order.raw.orderStatus,
+    order.raw.paymentStatus || "N/A",
+    `"${(order.raw.shippingAddress || "N/A").replace(/"/g, '""')}"`,
+    new Date(order.raw.createdAt).toLocaleString()
+  ]);
+
+  return [headers, ...rows]
+    .map(row => row.join(","))
+    .join("\n");
+};
+
+const downloadCSV = (csvContent, fileName) => {
+  // Create a blob with the CSV content
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  
+  // Create a download link
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute("href", url);
+  link.setAttribute("download", fileName);
+  link.style.visibility = "hidden";
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  // Clean up the URL object
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+};
+
 /* ================= MAIN ================= */
 const OrderHistory = () => {
   const { user } = useAuth();
@@ -50,12 +113,26 @@ const OrderHistory = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   /* ================= LOAD ORDERS ================= */
   useEffect(() => {
+    if (!user?.role) return;
+
     const loadOrders = async () => {
       try {
-        const res = await getAllOrders();
+        let res;
+
+        // ✅ ROLE BASED API CALL
+        if (user.role === "SUPERADMIN") {
+          res = await getAllOrders();
+        } else if (user.role === "ADMIN") {
+          res = await getAdminOrders();
+        } else {
+          return;
+        }
+
         if (!res?.ok) throw new Error();
 
         const mapped = res.data.orders.map((o) => ({
@@ -83,7 +160,38 @@ const OrderHistory = () => {
     };
 
     loadOrders();
-  }, []);
+  }, [user]);
+
+  /* ================= EXPORT TO CSV/EXCEL ================= */
+  const exportToExcel = () => {
+    try {
+      setExportLoading(true);
+      
+      if (orders.length === 0) {
+        toast.error("No orders to export");
+        return;
+      }
+
+      // Convert orders to CSV format
+      const csvData = convertToCSV(orders);
+      
+      // Generate filename with current date
+      const today = new Date();
+      const dateStr = `${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`;
+      const timeStr = `${today.getHours()}-${today.getMinutes()}`;
+      const fileName = `Orders_Export_${dateStr}_${timeStr}.csv`;
+
+      // Download the CSV file
+      downloadCSV(csvData, fileName);
+      
+      toast.success(`Exported ${orders.length} orders to CSV/Excel`);
+    } catch (error) {
+      console.error("Error exporting to CSV:", error);
+      toast.error("Failed to export data");
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   /* ================= FILTER ================= */
   const filteredOrders = useMemo(() => {
@@ -126,6 +234,20 @@ const OrderHistory = () => {
     };
   }, [orders]);
 
+  // ✅ Handle invoice download using the new component
+  const handleDownloadInvoice = async (order) => {
+    try {
+      setInvoiceLoading(true);
+      await generateInvoice(order.raw);
+      toast.success("Invoice downloaded successfully!");
+    } catch (error) {
+      console.error("Failed to generate invoice:", error);
+      toast.error("Failed to generate invoice");
+    } finally {
+      setInvoiceLoading(false);
+    }
+  };
+
   if (loading) {
     return <div className="p-6 text-gray-500">Loading order history…</div>;
   }
@@ -134,7 +256,33 @@ const OrderHistory = () => {
     <div className="min-h-screen bg-gray-50">
       {/* ================= HEADER ================= */}
       <div className="bg-white rounded-lg shadow-sm p-3 mb-2">
-        <h2 className="text-xl font-bold">📊 Order History</h2>
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-xl font-bold">📊 Order History</h2>
+          
+          {/* ✅ CSV/Excel Export Button */}
+          <button
+            onClick={exportToExcel}
+            disabled={exportLoading || orders.length === 0}
+            className={`px-4 py-2 rounded flex items-center gap-2 ${
+              orders.length === 0
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : exportLoading
+                ? "bg-green-500 text-white"
+                : "bg-green-600 text-white hover:bg-green-700"
+            }`}
+          >
+            {exportLoading ? (
+              <>
+                <span className="animate-spin">⏳</span>
+                Exporting...
+              </>
+            ) : (
+              <>
+                📊 Export to Excel ({orders.length})
+              </>
+            )}
+          </button>
+        </div>
 
         <div className="flex gap-2 my-3">
           <input
@@ -161,10 +309,7 @@ const OrderHistory = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Stat label="Total Orders" value={analytics.total} />
           <Stat label="Completed" value={analytics.completed} green />
-          <Stat
-            label="Revenue"
-            value={`₹${analytics.revenue.toFixed(2)}`}
-          />
+          <Stat label="Revenue" value={`₹${analytics.revenue.toFixed(2)}`} />
           <Stat label="Success Rate" value={`${analytics.rate}%`} />
         </div>
       </div>
@@ -224,6 +369,8 @@ const OrderHistory = () => {
           <OrderModal
             order={selectedOrder}
             onClose={() => setSelectedOrder(null)}
+            onDownloadInvoice={handleDownloadInvoice}
+            invoiceLoading={invoiceLoading}
           />
         )}
       </AnimatePresence>
@@ -232,7 +379,7 @@ const OrderHistory = () => {
 };
 
 /* ================= MODAL ================= */
-const OrderModal = ({ order, onClose }) => {
+const OrderModal = ({ order, onClose, onDownloadInvoice, invoiceLoading }) => {
   const ref = useRef();
 
   useEffect(() => {
@@ -248,96 +395,9 @@ const OrderModal = ({ order, onClose }) => {
     };
   }, [onClose]);
 
- const downloadInvoice = () => {
-  const pdf = new jsPDF("p", "mm", "a4");
-
-  /* ================= LOGO ================= */
-  const img = new Image();
-  img.src = Logo;
-
-  pdf.addImage(img, "PNG", 15, 10, 40, 20);
-
-  /* ================= HEADER ================= */
-  pdf.setFontSize(16);
-  pdf.text("TAX INVOICE", 150, 20, { align: "right" });
-
-  pdf.setFontSize(10);
-  pdf.text("Your Company Name Pvt. Ltd.", 15, 35);
-  pdf.text("GSTIN: 09ABCDE1234F1Z5", 15, 41);
-  pdf.text("Address: Lucknow, Uttar Pradesh, India", 15, 47);
-
-  pdf.line(15, 52, 195, 52);
-
-  /* ================= ORDER INFO ================= */
-  pdf.setFontSize(11);
-  pdf.text(`Invoice No: ${order.id}`, 15, 60);
-  pdf.text(`Invoice Date: ${order.date}`, 15, 66);
-
-  pdf.text(`Customer: ${order.customer}`, 110, 60);
-  pdf.text(`Payment Mode: ${order.payment}`, 110, 66);
-
-  /* ================= TABLE HEADER ================= */
-  let y = 78;
-  pdf.setFontSize(10);
-  pdf.setFillColor(240, 240, 240);
-  pdf.rect(15, y - 6, 180, 8, "F");
-
-  pdf.text("Item", 17, y);
-  pdf.text("Qty", 110, y);
-  pdf.text("Price", 130, y);
-  pdf.text("GST", 155, y);
-  pdf.text("Total", 175, y, { align: "right" });
-
-  /* ================= ITEMS ================= */
-  y += 6;
-
-  order.raw.items.forEach((item, i) => {
-    const price = item.total;
-    const gst = ((price * 5) / 100).toFixed(2); // 5% GST example
-    const total = (Number(price) + Number(gst)).toFixed(2);
-
-    pdf.text(`${i + 1}. ${item.productName} (${item.varietyName})`, 17, y);
-    pdf.text(String(item.quantity), 112, y);
-    pdf.text(`₹${price}`, 130, y);
-    pdf.text(`₹${gst}`, 155, y);
-    pdf.text(`₹${total}`, 175, y, { align: "right" });
-
-    y += 7;
-  });
-
-  pdf.line(15, y, 195, y);
-  y += 8;
-
-  /* ================= TOTALS ================= */
-  pdf.setFontSize(11);
-  pdf.text(`Sub Total: ₹${order.raw.subTotal}`, 140, y, { align: "right" });
-  y += 6;
-
-  pdf.text(`GST (5%): ₹${order.raw.gstAmount}`, 140, y, { align: "right" });
-  y += 6;
-
-  pdf.text(`Delivery Charge: ₹${order.raw.deliveryCharge}`, 140, y, {
-    align: "right",
-  });
-  y += 8;
-
-  pdf.setFontSize(13);
-  pdf.text(`Grand Total: ₹${order.raw.totalAmount}`, 140, y, {
-    align: "right",
-  });
-
-  /* ================= FOOTER ================= */
-  pdf.setFontSize(9);
-  pdf.text(
-    "This is a system generated GST invoice.",
-    105,
-    280,
-    { align: "center" }
-  );
-
-  pdf.save(`GST_Invoice_${order.id}.pdf`);
-};
-
+  const handleDownload = () => {
+    onDownloadInvoice(order);
+  };
 
   return (
     <motion.div
@@ -370,20 +430,49 @@ const OrderModal = ({ order, onClose }) => {
           <p><b>Status:</b> {order.status}</p>
           <p><b>Payment:</b> {order.payment}</p>
           <p><b>Total:</b> {order.total}</p>
+          
+          <div className="mt-4">
+            <p className="font-semibold mb-2">Order Items:</p>
+            <div className="max-h-40 overflow-y-auto">
+              {order.raw.items.map((item, index) => (
+                <div key={index} className="flex justify-between py-1 border-b">
+                  <div>
+                    <span className="font-medium">{item.productName}</span>
+                    {item.varietyName && (
+                      <span className="text-gray-600 text-sm"> ({item.varietyName})</span>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <span className="text-gray-600">×{item.quantity}</span>
+                    <span className="ml-2 font-medium">₹{item.total}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 rounded"
+            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition"
+            disabled={invoiceLoading}
           >
             Close
           </button>
           <button
-            onClick={downloadInvoice}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
+            onClick={handleDownload}
+            disabled={invoiceLoading}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Download Invoice
+            {invoiceLoading ? (
+              <>
+                <span className="animate-spin mr-2">⏳</span>
+                Generating...
+              </>
+            ) : (
+              "Download Invoice"
+            )}
           </button>
         </div>
       </motion.div>
@@ -393,7 +482,7 @@ const OrderModal = ({ order, onClose }) => {
 
 /* ================= STAT ================= */
 const Stat = ({ label, value, green }) => (
-  <div className="bg-white border  rounded text-center flex justify-center items-center gap-2 py-2">
+  <div className="bg-white border rounded text-center flex justify-center items-center gap-2 py-2">
     <p className="text-sm text-gray-500">{label}</p>
     <p className={`text-xl font-bold ${green ? "text-green-600" : ""}`}>
       {value}

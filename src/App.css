@@ -1,8 +1,20 @@
-body{
-  margin: 0%;
-  padding: 0%;
+/* Global styles */
+body {
+  margin: 0;
+  padding: 0;
 }
 
+/* Hide scrollbar globally */
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hidden {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Custom scrollbar for other elements */
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;
 }
