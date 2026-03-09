@@ -14,7 +14,7 @@ import AddAdminPage from './Pages/Admin/AddAdminPage'
 import AdminListPage from './Pages/Admin/AdminListPage'
 import ProductsList from './Pages/Product/ProductsList'
 import AddProduct from './Pages/Product/AddProduct'
-import Rule from './Pages/FeeRules/Rule'
+// import Rule from './Pages/FeeRules/Rule'
 import Banner from './Pages/Banner/Banner'
 import RestaurantsWallet from './Pages/Wallet/RestaurantsWallet'
 import WalletsDetails from './Pages/Wallet/WalletsDetails'
@@ -43,7 +43,7 @@ export default function App() {
 
             {/* Public */}
             <Route path="/login" element={<Login />} />
-            <Route path="/Terms" element={<Rule />} />
+            {/* <Route path="/Terms" element={<Rule />} /> */}
 
             {/* Protected */}
             <Route path="/" element={<ProtectedRoute><OrdersPage/></ProtectedRoute>} />
