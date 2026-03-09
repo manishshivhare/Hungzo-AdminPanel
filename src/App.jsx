@@ -24,8 +24,8 @@ import Restaurants from './Pages/Restaurants/Restaurants'
 export default function App() {
   const location = useLocation()
 
-  // Hide sidebar + header on login page
   const noSidebar = location.pathname === '/login'
+  // Hide sidebar + header on login page
 
   return (
     <div className="h-screen w-screen flex overflow-hidden bg-gray-100">
