@@ -1,7 +1,6 @@
 import React from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import Header from './components/Header'
 import ProtectedRoute from './Components/ProtectedRoute'
 import LogoutPage from './Pages/auth/LogoutPage'
 import NotFound from './Pages/auth/NotFound'
