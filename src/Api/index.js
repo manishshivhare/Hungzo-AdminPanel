@@ -76,6 +76,21 @@ export async function restaurantprofile() {
     };
   }
 }
+// ================= Only Logged User RESTAURANTLIST ==================
+
+export async function restaurantOnlyLogged() {
+  try {
+    const res = await API.get("/admin/dashboard/pending-users");
+    return res.data;
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message ||
+        "Failed to fetch restaurant list",
+    };
+  }
+}
 
 // ================= RESTAURANT PENDING LIST ==================
 export async function restaurantList() {

@@ -7,6 +7,7 @@ import {
 import RestaurantVerifi from "../Restaurants/RestaurantPending";
 import RestaurantApproved from "../Restaurants/RestaurantApproved";
 import RestaurantRejectes from "../Restaurants/RestaurantRejectes";
+import OnlyLoggedUser from "./OnlyLoggedUser";
 
 const TABS = [
   {
@@ -23,6 +24,11 @@ const TABS = [
     key: "rejected",
     label: "Rejected",
     icon: XCircle,
+  },
+  {
+    key: "logged",
+    label: "Logged User",
+    icon: CheckCircle,
   },
 ];
 
@@ -60,6 +66,7 @@ const Restaurant = () => {
         {activeTab === "pending" && <RestaurantVerifi />}
         {activeTab === "approved" && <RestaurantApproved />}
         {activeTab === "rejected" && <RestaurantRejectes />}
+        {activeTab === "logged" && <OnlyLoggedUser />}
       </div>
     </div>
   );

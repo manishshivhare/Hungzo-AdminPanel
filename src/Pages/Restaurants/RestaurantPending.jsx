@@ -152,8 +152,7 @@ const RestaurantVerifi = () => {
                   </td>
 
                   <td className="px-5 py-4 text-center">
-                    {console.log(res)
-                    }
+                   
                     <button
                       onClick={() => setSelectedRestaurant(res)}
                       className="p-2 hover:bg-slate-200 rounded"
