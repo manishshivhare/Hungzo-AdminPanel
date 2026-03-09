@@ -141,7 +141,7 @@ export default function AddProductPage() {
       <div className="mx-auto max-w-lg bg-white rounded-xl shadow">
         <div className="bg-[#141414] text-white text-center py-4 rounded-t-xl">
           <h2 className="text-2xl font-bold font-sans ">Add New Food</h2>
-      
+
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-3 h-[77vh] overflow-y-auto">
@@ -242,7 +242,7 @@ export default function AddProductPage() {
             className="w-full border px-3 py-2 rounded h-24"
           />
 
-          <input type="file" multiple accept="image/*" onChange={handleFiles} className=""/>
+          <input type="file" multiple accept="image/*" onChange={handleFiles} className="" />
 
           {images.length > 0 && (
             <div className="grid grid-cols-3 gap-2">
@@ -261,20 +261,19 @@ export default function AddProductPage() {
             </div>
           )}
 
+          <h6 className=" text-sm text-gray-400">Image size must be less than 5MB </h6>
           <button
             disabled={loading}
             className="w-full bg-[#0a0b0bde] text-white py-2 rounded"
           >
             {loading ? "Adding..." : "Add Product"}
           </button>
-
           {message && (
             <p
-              className={`text-center ${
-                message.type === "error"
+              className={`text-center ${message.type === "error"
                   ? "text-red-600"
                   : "text-green-600"
-              }`}
+                }`}
             >
               {message.text}
             </p>

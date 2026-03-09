@@ -161,7 +161,7 @@ const RestaurantVerifi = () => {
                     </button>
                       {/* {console.log(res.owner._id)} */}
                       <Link
-                        to={`/wallet/${res.owner._id}`}
+                        to={`/wallet/${res.owner?._id}`}
                         className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-100 hover:bg-green-200 text-green-600 transition-colors"
                         title="View Wallet"
                       >
