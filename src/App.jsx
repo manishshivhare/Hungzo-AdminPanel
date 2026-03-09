@@ -12,7 +12,6 @@ import Suppliers from './Pages/Suppliers/Suppliers'
 import Driver from './Pages/Drivers/Drivers'
 import AddAdminPage from './Pages/Admin/AddAdminPage'
 import AdminListPage from './Pages/Admin/AdminListPage'
-import Restaurants from './Pages/restaurants/Restaurants'
 import ProductsList from './Pages/Product/ProductsList'
 import AddProduct from './Pages/Product/AddProduct'
 import Rule from './Pages/FeeRules/Rule'
@@ -20,6 +19,7 @@ import Banner from './Pages/Banner/Banner'
 import RestaurantsWallet from './Pages/Wallet/RestaurantsWallet'
 import WalletsDetails from './Pages/Wallet/WalletsDetails'
 import Notification from './Pages/notification/Notification'
+import Restaurants from './Pages/restaurants/Restaurants'
 
 export default function App() {
   const location = useLocation()
