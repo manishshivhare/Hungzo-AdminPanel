@@ -5,7 +5,7 @@ import {
   Clock,
 } from "lucide-react";
 import RestaurantVerifi from "../Restaurants/RestaurantPending";
-import RestaurantApproved from "../restaurants/RestaurantApproved";
+import RestaurantApproved from "../Restaurants/RestaurantApproved";
 import RestaurantRejectes from "../Restaurants/RestaurantRejectes";
 
 const TABS = [
