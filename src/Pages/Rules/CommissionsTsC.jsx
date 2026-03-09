@@ -1,6 +1,6 @@
 import React from "react";
 
-const CommissionTsC = () => {
+const CommissionsTsC = () => {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">Commission Rules</h2>
@@ -15,4 +15,4 @@ const CommissionTsC = () => {
   );
 };
 
-export default CommissionTsC;
+export default CommissionsTsC;

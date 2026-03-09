@@ -1,15 +1,15 @@
 import React, { useState } from "react";
-import CommissionTsC from "./CommissionTsC";
-import DeliveryFeeRules from "./DeliveryFeeRules";
-import RestaurantTsC from "./restaurantTsC";
+import CommissionsTsC from "./CommissionsTsC";
+import RestaurantTandC from "./RestaurantTandC";
+import DeliveryFeesRules from "./DeliveryFeesRules";
 
-const Rule = () => {
+const Rules = () => {
   const [activeTab, setActiveTab] = useState("commission");
 
   const tabs = [
-    { id: "commission", label: "Commission", component: <CommissionTsC /> },
-    { id: "restaurant", label: "Restaurant", component: <RestaurantTsC /> },
-    { id: "delivery", label: "Delivery Fee", component: <DeliveryFeeRules /> },
+    { id: "commission", label: "Commission", component: <CommissionsTsC /> },
+    { id: "restaurant", label: "Restaurant", component: <RestaurantTandC /> },
+    { id: "delivery", label: "Delivery Fee", component: <DeliveryFeesRules /> },
   ];
 
   return (
@@ -48,4 +48,4 @@ const Rule = () => {
   );
 };
 
-export default Rule;
+export default Rules;

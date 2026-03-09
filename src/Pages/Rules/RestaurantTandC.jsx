@@ -1,6 +1,7 @@
+
 import React, { useState } from "react";
 
-const RestaurantTsC = () => {
+const RestaurantTandC = () => {
   const [rules, setRules] = useState([
     {
       id: 1,
@@ -141,4 +142,4 @@ const RestaurantTsC = () => {
   );
 };
 
-export default RestaurantTsC;
+export default RestaurantTandC;

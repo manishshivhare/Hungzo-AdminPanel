@@ -1,6 +1,6 @@
 import React from "react";
 
-const DeliveryFeeRules = () => {
+const DeliveryFeesRules = () => {
   return (
     <div className="space-y-2">
       {/* HEADER */}
@@ -115,4 +115,4 @@ const RuleCard = ({ title, description, value, color }) => {
   );
 };
 
-export default DeliveryFeeRules;
+export default DeliveryFeesRules;

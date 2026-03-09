@@ -14,12 +14,11 @@ import AddAdminPage from './Pages/Admin/AddAdminPage'
 import AdminListPage from './Pages/Admin/AdminListPage'
 import ProductsList from './Pages/Product/ProductsList'
 import AddProduct from './Pages/Product/AddProduct'
-// import Rule from './Pages/FeeRules/Rule'
 import Banner from './Pages/Banner/Banner'
 import RestaurantsWallet from './Pages/Wallet/RestaurantsWallet'
 import WalletsDetails from './Pages/Wallet/WalletsDetails'
 import Notification from './Pages/notification/Notification'
-import Restaurants from './Pages/Restaurants/Restaurants'
+import Rules from './Pages/Rules/Rules'
 
 export default function App() {
   const location = useLocation()
@@ -43,6 +42,7 @@ export default function App() {
 
             {/* Public */}
             <Route path="/login" element={<Login />} />
+            <Route path="/Terms" element={<Rules />} />
             {/* <Route path="/Terms" element={<Rule />} /> */}
 
             {/* Protected */}
