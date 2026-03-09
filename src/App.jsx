@@ -19,7 +19,7 @@ import Banner from './Pages/Banner/Banner'
 import RestaurantsWallet from './Pages/Wallet/RestaurantsWallet'
 import WalletsDetails from './Pages/Wallet/WalletsDetails'
 import Notification from './Pages/notification/Notification'
-import Restaurants from './Pages/restaurants/Restaurants.jsx'
+import Restaurants from './Pages/Restaurants/Restaurants'
 
 export default function App() {
   const location = useLocation()

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import RestaurantVerifi from "../restaurants/RestaurantPending";
+import RestaurantVerifi from "../Restaurants/RestaurantPending";
 import DriversVerifi from "../Drivers/DriversPendding";
 
 const Verifications = () => {
