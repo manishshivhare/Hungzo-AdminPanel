@@ -4,9 +4,9 @@ import {
   XCircle,
   Clock,
 } from "lucide-react";
-import RestaurantVerifi from "./RestaurantPending";
-import RestaurantApproved from "./RestaurantApproved";
-import RestaurantRejectes from "./RestaurantRejectes";
+import RestaurantVerifi from "../Restaurants/RestaurantPending";
+import RestaurantApproved from "../restaurants/RestaurantApproved";
+import RestaurantRejectes from "../Restaurants/RestaurantRejectes";
 
 const TABS = [
   {
@@ -26,7 +26,7 @@ const TABS = [
   },
 ];
 
-const Restaurants = () => {
+const Restaurant = () => {
   const [activeTab, setActiveTab] = useState("pending");
 
   return (
@@ -65,4 +65,4 @@ const Restaurants = () => {
   );
 };
 
-export default Restaurants;
+export default Restaurant;

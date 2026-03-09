@@ -19,6 +19,7 @@ import RestaurantsWallet from './Pages/Wallet/RestaurantsWallet'
 import WalletsDetails from './Pages/Wallet/WalletsDetails'
 import Notification from './Pages/notification/Notification'
 import Rules from './Pages/Rules/Rules'
+import Restaurant from './Pages/Restaurant/Restaurant'
 
 export default function App() {
   const location = useLocation()
@@ -43,7 +44,6 @@ export default function App() {
             {/* Public */}
             <Route path="/login" element={<Login />} />
             <Route path="/Terms" element={<Rules />} />
-            {/* <Route path="/Terms" element={<Rule />} /> */}
 
             {/* Protected */}
             <Route path="/" element={<ProtectedRoute><OrdersPage/></ProtectedRoute>} />
@@ -53,7 +53,7 @@ export default function App() {
             <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
             <Route path="/logout" element={<ProtectedRoute><LogoutPage /></ProtectedRoute>} />
             <Route path="/notification" element={<ProtectedRoute><Notification /></ProtectedRoute>} />
-            {/* <Route path="/restaurants" element={<ProtectedRoute><Restaurants/></ProtectedRoute>} /> */}
+            <Route path="/restaurants" element={<ProtectedRoute><Restaurant/></ProtectedRoute>} />
             <Route path="/verification" element={<ProtectedRoute><Verifications /></ProtectedRoute>} />
             <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
             <Route path="/drivers" element={<ProtectedRoute><Driver /></ProtectedRoute>} />
