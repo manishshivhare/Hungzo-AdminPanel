@@ -9,10 +9,11 @@ import {
   UserGroupIcon,
   UserPlusIcon,
   ArrowRightOnRectangleIcon,
+  BellAlertIcon,
 } from "@heroicons/react/24/solid";
 import logo from "../assets/Logo.png";
 import { useAuth } from "../Context/AuthProvider";
-import {  Scale, Wallet,  } from "lucide-react";
+import { AlertTriangle, Scale, Wallet, } from "lucide-react";
 
 /* -------------------- MENU CONFIG -------------------- */
 
@@ -22,6 +23,7 @@ const adminMenu = [
   { to: "/Add-product", label: "Add Product", icon: CubeIcon },
   { to: "/profile", label: "Profile", icon: UserGroupIcon },
   { to: "/banner", label: "Banner", icon: ArchiveBoxIcon },
+  { to: "/notification", label: "notification", icon: BellAlertIcon },
   { to: "/Terms", label: "(T&Cs)", icon: Scale },
   { to: "/logout", label: "Logout", icon: ArrowRightOnRectangleIcon },
 ];
@@ -36,6 +38,7 @@ const superAdminMenu = [
   { to: "/admin", label: "Admins", icon: UserGroupIcon },
   { to: "/add-admin", label: "Add Admin", icon: UserPlusIcon },
   { to: "/banner", label: "Banner", icon: ArchiveBoxIcon },
+  { to: "/notification", label: "notification", icon: BellAlertIcon },
   { to: "/walletDetails", label: "Wallet", icon: Wallet },
   { to: "/Terms", label: "(T&Cs)", icon: Scale },
   { to: "/logout", label: "Logout", icon: ArrowRightOnRectangleIcon },
@@ -68,7 +71,7 @@ export default function Sidebar() {
         </Link>
 
         {/* Scrollable navigation with hidden scrollbar */}
-        <div 
+        <div
           className="h-[77vh] overflow-y-auto"
           style={{
             scrollbarWidth: 'none', // Firefox

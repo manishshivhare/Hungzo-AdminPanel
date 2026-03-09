@@ -20,6 +20,7 @@ import Rule from './Pages/FeeRules/Rule'
 import Banner from './Pages/Banner/Banner'
 import RestaurantsWallet from './Pages/Wallet/RestaurantsWallet'
 import WalletsDetails from './Pages/Wallet/WalletsDetails'
+import Notification from './Pages/notification/Notification'
 
 export default function App() {
   const location = useLocation()
@@ -46,12 +47,13 @@ export default function App() {
             <Route path="/Terms" element={<Rule />} />
 
             {/* Protected */}
-            <Route path="/" element={<ProtectedRoute><Driver/></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><OrdersPage/></ProtectedRoute>} />
             {/* <Route path="/payment" element={<ProtectedRoute><Transaction /></ProtectedRoute>} /> */}
             <Route path="/walletDetails" element={<ProtectedRoute><WalletsDetails /></ProtectedRoute>} />
             <Route path="/wallet/:userId" element={<RestaurantsWallet />} />
             <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
             <Route path="/logout" element={<ProtectedRoute><LogoutPage /></ProtectedRoute>} />
+            <Route path="/notification" element={<ProtectedRoute><Notification /></ProtectedRoute>} />
             <Route path="/restaurants" element={<ProtectedRoute><Restaurants /></ProtectedRoute>} />
             <Route path="/verification" element={<ProtectedRoute><Verifications /></ProtectedRoute>} />
             <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />

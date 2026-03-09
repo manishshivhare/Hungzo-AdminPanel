@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE = "http://localhost:4000";
+const API_BASE = "https://api.hungzo.in";
 
 const API = axios.create({
   baseURL: API_BASE,
