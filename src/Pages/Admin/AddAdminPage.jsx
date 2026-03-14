@@ -32,13 +32,14 @@ export default function AddAdminPage() {
   const [form, setForm] = useState({
     username: "",
     password: "",
-    role: "ADMIN",
+    role: "SELECT ROLE",
   });
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const roles = ["SUPERADMIN", "ADMIN"];
+  // const roles = ["SUPERADMIN", "ADMIN"];
+  const roles = ["SELECT ROLE", "ADMIN"];
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
