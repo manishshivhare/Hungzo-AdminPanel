@@ -21,7 +21,7 @@ const adminMenu = [
   { to: "/orders", label: "Orders", icon: ClipboardDocumentListIcon },
   { to: "/product", label: "My Product", icon: CubeIcon },
   { to: "/Add-product", label: "Add Product", icon: CubeIcon },
-  { to: "/profile", label: "Profile", icon: UserGroupIcon },
+  // { to: "/profile", label: "Profile", icon: UserGroupIcon },
   { to: "/banner", label: "Banner", icon: ArchiveBoxIcon },
   { to: "/notification", label: "notification", icon: BellAlertIcon },
   { to: "/Terms", label: "(T&Cs)", icon: Scale },

@@ -17,10 +17,7 @@ const Banner = () => {
               Manage your website banners and promotional posters
             </p>
           </div>
-          <div className="mt-4 sm:mt-0 flex items-center space-x-2 text-sm text-gray-600">
-            <span>Logged in as</span>
-            <span className="font-semibold text-blue-600">ADMIN</span>
-          </div>
+        
         </div>
       </div>
 

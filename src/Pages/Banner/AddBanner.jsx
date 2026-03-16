@@ -260,7 +260,7 @@ const AddBanner = ({ onBack, onBannerCreated }) => {
     <div className="p-6">
       <h2 className="text-lg font-semibold mb-4">Add Banner</h2>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4 h-[56vh] overflow-y-auto ">
         {/* TITLE */}
         <input
           type="text"

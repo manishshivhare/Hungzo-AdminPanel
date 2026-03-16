@@ -1,6 +1,7 @@
 import axios from "axios";
 
 const API_BASE = "https://api.hungzo.in";
+// const API_BASE = "http://192.168.1.39:4000";
 
 const API = axios.create({
   baseURL: API_BASE,
@@ -272,7 +273,22 @@ export async function rejectDriverReq(id) {
   }
 }
 
-
+// ////////////////// Driver Order ////////
+export async function DriverOrder(driverId) {
+  try {
+    const res = await API.get(`/admin/dashboard/drivers/${driverId}/orders`);
+    console.log(res);
+    return res.data;
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message ||
+        "Failed to fetch driver orders",
+    };
+  }
+}
+// =================  =================
 
 /* ================= FETCH CATEGORIES ================= */
 export async function fetchCategories() {
@@ -464,7 +480,7 @@ export async function getReturnOrders() {
   try {
     const res = await API.get("/returns/admin/all");
     console.log(res);
-    
+
     return { ok: true, data: res.data };
   } catch (error) {
     console.error(

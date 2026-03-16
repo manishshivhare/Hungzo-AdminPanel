@@ -676,8 +676,7 @@ const OrderHistory = () => {
                     📅 {date} <span className="text-gray-600 font-normal">({list.length} orders, ₹{list.reduce((sum, o) => sum + o.totalValue, 0).toFixed(2)})</span>
                   </td>
                 </tr>
-{console.log(list)
-}
+
                 {list.map((o) => (
                   <tr
                     key={o.id}

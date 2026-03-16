@@ -492,16 +492,7 @@ const DocumentModal = ({ driver, onClose, onApprove, onReject }) => {
             >
               Vehicle Details
             </button>
-            <button
-              onClick={() => setActiveTab("stats")}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === "stats" 
-                  ? "border-yellow-500 text-yellow-600" 
-                  : "border-transparent text-slate-500"
-              }`}
-            >
-              Statistics
-            </button>
+     
           </div>
         </div>
 
@@ -530,13 +521,9 @@ const DocumentModal = ({ driver, onClose, onApprove, onReject }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <p className="text-sm"><span className="font-medium">Phone:</span> {driver.user?.phone || "—"}</p>
-                  <p className="text-sm"><span className="font-medium">Email:</span> {driver.user?.email || "—"}</p>
-                  <p className="text-sm"><span className="font-medium">Firebase UID:</span> {driver.user?.firebaseUid || "—"}</p>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-sm"><span className="font-medium">Role:</span> {driver.user?.role || "DRIVER"}</p>
                   <p className="text-sm"><span className="font-medium">Profile Completed:</span> {driver.user?.isProfileCompleted ? "Yes" : "No"}</p>
-                  <p className="text-sm"><span className="font-medium">Verified:</span> {driver.user?.isVerified ? "Yes" : "No"}</p>
                 </div>
               </div>
 
@@ -661,68 +648,7 @@ const DocumentModal = ({ driver, onClose, onApprove, onReject }) => {
             </div>
           )}
 
-          {activeTab === "stats" && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-50 p-4 rounded-lg">
-                  <p className="text-sm text-slate-500">Status</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Activity size={16} className={driver.isOnline ? "text-green-600" : "text-slate-400"} />
-                    <span className="font-medium">{driver.isOnline ? "Online" : "Offline"}</span>
-                  </div>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-lg">
-                  <p className="text-sm text-slate-500">Active</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Clock size={16} className={driver.isActive ? "text-green-600" : "text-slate-400"} />
-                    <span className="font-medium">{driver.isActive ? "Active" : "Inactive"}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 p-4 rounded-lg">
-                <p className="text-sm text-slate-500">Total Earnings</p>
-                <p className="text-2xl font-bold">₹{driver.totalEarnings || 0}</p>
-              </div>
-
-              {driver.currentLocation && driver.currentLocation.lat !== 0 && (
-                <div className="bg-slate-50 p-4 rounded-lg">
-                  <p className="text-sm text-slate-500 mb-2">Current Location</p>
-                  <p className="text-sm">
-                    <span className="font-medium">Latitude:</span> {driver.currentLocation.lat}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-medium">Longitude:</span> {driver.currentLocation.lng}
-                  </p>
-                  <a 
-                    href={`https://www.google.com/maps?q=${driver.currentLocation.lat},${driver.currentLocation.lng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-2"
-                  >
-                    <Navigation size={14} /> View on Maps
-                  </a>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-50 p-4 rounded-lg">
-                  <p className="text-sm text-slate-500">FCM Tokens</p>
-                  <p className="font-medium">{driver.user?.fcmTokens?.length || 0}</p>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-lg">
-                  <p className="text-sm text-slate-500">Verification Status</p>
-                  <span className={`inline-block px-2 py-1 text-xs rounded mt-1 ${
-                    driver.verificationStatus === "PENDING" ? "bg-yellow-100 text-yellow-700" :
-                    driver.verificationStatus === "APPROVED" ? "bg-green-100 text-green-700" :
-                    "bg-red-100 text-red-700"
-                  }`}>
-                    {driver.verificationStatus || "PENDING"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
+         
         </div>
 
         {/* Footer Actions */}

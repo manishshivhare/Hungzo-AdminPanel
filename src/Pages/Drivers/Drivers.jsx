@@ -50,7 +50,7 @@ const Drivers = () => {
   const currentTab = TABS.find((t) => t.id === activeTab);
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
+    <div className="h-screen bg-slate-50 p-6 overflow-y-auto">
       {/* ===== Header ===== */}
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-3">

@@ -20,6 +20,7 @@ import WalletsDetails from './Pages/Wallet/WalletsDetails'
 import Notification from './Pages/notification/Notification'
 import Rules from './Pages/Rules/Rules'
 import Restaurant from './Pages/Restaurant/Restaurant'
+import DriverOrder from './Pages/Drivers/DriverOrder'
 
 export default function App() {
   const location = useLocation()
@@ -62,6 +63,7 @@ export default function App() {
             <Route path='/product' element={<ProtectedRoute><ProductsList /></ProtectedRoute>} />
             <Route path='/add-product' element={<ProtectedRoute><AddProduct /></ProtectedRoute>} />
             <Route path='/banner' element={<ProtectedRoute><Banner /></ProtectedRoute>} />
+            <Route path='/driver-orders/:driverId' element={<DriverOrder />} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />

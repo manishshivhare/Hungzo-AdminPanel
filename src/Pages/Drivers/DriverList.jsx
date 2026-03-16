@@ -1,11 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { DriverApproved as getApprovedDrivers } from "../../Api";
-import {
-  User, CheckCircle, Search, Download, Eye, Phone, Car, Bike,
-  X, MapPin, IdCard, Calendar, Activity, Truck, FileText,
-  Mail, Award, Clock, Navigation, ShieldCheck, Wifi, Maximize2
-} from "lucide-react";
+import { User, CheckCircle, Search, Download, Eye, Phone, Car, Bike, X, MapPin, IdCard, Calendar, Activity, Truck, FileText, Mail, Award, Clock, Navigation, ShieldCheck, Wifi, Maximize2, MoveUpRightIcon, } from "lucide-react";
 import toast from "react-hot-toast";
+import { Link } from "react-router-dom";
 
 const DriverList = () => {
   const [drivers, setDrivers] = useState([]);
@@ -86,7 +83,7 @@ const DriverList = () => {
   }
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-6 bg-gray-50 ">
 
       {/* Search and Export Bar */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
@@ -115,7 +112,7 @@ const DriverList = () => {
       </div>
 
       {/* Drivers Grid/Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 h-[70vh] overflow-y-auto">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-100">
@@ -127,6 +124,7 @@ const DriverList = () => {
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-gray-100">
               {filteredDrivers.length === 0 ? (
                 <tr>
@@ -190,7 +188,7 @@ const DriverList = () => {
                         </div>
                       </div>
                     </td>
-                   
+
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
                         <CheckCircle className="w-3.5 h-3.5" />
@@ -241,21 +239,78 @@ const DriverDetailsModal = ({ driver, onClose, onContact }) => {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-green-600 to-emerald-700 px-8 py-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <h2 className="text-2xl font-bold text-white">Driver Profile</h2>
-                <p className="text-green-100 mt-1">Complete information and details</p>
+          {/* Header - Modern Glass Design */}
+          <div className="relative overflow-hidden bg-gradient-to-r from-green-600 via-green-500 to-emerald-600 px-8 py-6">
+            {/* Background decorative elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24"></div>
+
+            <div className="relative z-10">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                {/* Left side with icon and title */}
+                <div className="flex items-center gap-4">
+                  <div className="bg-white/20 backdrop-blur-sm p-3 rounded-2xl shadow-lg">
+                    <User className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold text-white tracking-tight">Driver Profile</h2>
+                    <p className="text-green-100 text-sm mt-1 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-green-300 rounded-full"></span>
+                      Complete information and details
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right side actions */}
+                <div className="flex items-center gap-3">
+                  {/* Driver ID Card */}
+                  <div className="bg-white/10 backdrop-blur-sm px-5 py-2.5 rounded-xl border border-white/20 shadow-lg">
+                    <p className="text-xs text-green-200 font-medium">DRIVER ID</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-mono font-bold text-white tracking-wider">
+                        {driver._id?.slice(0, 4)}...{driver._id?.slice(-4)}
+                      </span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(driver._id);
+                          toast.success('ID copied to clipboard');
+                        }}
+                        className="text-green-200 hover:text-white transition-colors"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Orders Button */}
+                  <Link
+                    to={`/driver-orders/${driver._id}`}
+                    state={{
+                      driverName: driver.user?.name,
+                      driverPhone: driver.user?.phone
+                    }}
+                    className="group flex items-center gap-3 bg-white hover:bg-green-50 px-5 py-2.5 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl transform hover:-translate-y-0.5"
+                  >
+                    <span className="text-sm font-semibold text-green-700">VIEW ORDERS</span>
+                    <div className="bg-green-100 p-1.5 rounded-lg group-hover:bg-green-200 transition-colors">
+                      <MoveUpRightIcon className="w-4 h-4 text-green-700 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                    </div>
+                  </Link>
+
+                  {/* Close Button with animation */}
+                  <button
+                    onClick={onClose}
+                    className="bg-white/10 hover:bg-white/20 backdrop-blur-sm p-3 rounded-xl border border-white/20 shadow-lg transition-all duration-300 hover:rotate-90 hover:shadow-xl"
+                    title="Close"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={onClose}
-                className="text-white/80 hover:text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
+
+
             </div>
           </div>
-
           {/* Content */}
           <div className="p-8 overflow-y-auto max-h-[calc(90vh-120px)]">
             {/* Profile Header */}
@@ -461,7 +516,7 @@ const DriverDetailsModal = ({ driver, onClose, onContact }) => {
 
       {/* Full Screen Image Modal */}
       {selectedImage && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/90 flex items-center justify-center z-[60] p-4"
           onClick={() => setSelectedImage(null)}
         >
@@ -523,7 +578,7 @@ const StatusCard = ({ icon, label, value, color }) => {
 
 const DocumentCard = ({ title, imageUrl, icon, onImageClick }) => (
   <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-    <div 
+    <div
       className="aspect-video bg-gray-100 relative group cursor-pointer"
       onClick={onImageClick}
     >
