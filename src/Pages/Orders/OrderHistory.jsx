@@ -234,6 +234,8 @@ const OrderHistory = () => {
           res = await getAllOrders();
         } else if (user.role === "ADMIN") {
           res = await getAdminOrders();
+        
+         
         } else {
           return;
         }
@@ -245,7 +247,7 @@ const OrderHistory = () => {
           items: o.items
             .map((i) => `${i.productName} (${i.varietyName}) × ${i.quantity}`)
             .join(", "),
-          customerName: o.userDetails?.name || o.user?.name || "—",
+          customerName: o.user?.restaurantId?.name || o.user?.name || "—",
           email: o.userDetails?.email || o.user?.email || "—",
           phone: o.userDetails?.phone || o.user?.phone || o.shippingAddress?.phone || "—",
           status: o.orderStatus === "Delivered" ? "Completed" : o.orderStatus,
@@ -258,6 +260,8 @@ const OrderHistory = () => {
         }));
 
         setOrders(mapped);
+        console.log("Loaded orders:", mapped);
+        
       } catch (e) {
         toast.error("Failed to load data");
       } finally {
@@ -676,7 +680,7 @@ const OrderHistory = () => {
                     📅 {date} <span className="text-gray-600 font-normal">({list.length} orders, ₹{list.reduce((sum, o) => sum + o.totalValue, 0).toFixed(2)})</span>
                   </td>
                 </tr>
-
+              
                 {list.map((o) => (
                   <tr
                     key={o.id}

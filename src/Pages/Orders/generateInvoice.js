@@ -57,7 +57,7 @@ export const generateInvoice = async (order) => {
           <h3 style="margin: 0 0 5px 0; font-size: 14px; border-bottom: 1px solid #000; padding-bottom: 2px;">Customer Details</h3>
           <div style="margin-bottom: 3px;">
             <span style="font-weight: bold;">Name: </span>
-            <span>${order.userDetails?.name || order.user?.email || 'N/A'}</span>
+            <span>${order.user?.restaurantId.ownerName|| order.user?.email || 'N/A'}</span>
           </div>
           ${order.userDetails?.phone ? `
             <div>

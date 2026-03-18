@@ -25,11 +25,7 @@ const TABS = [
     label: "Rejected",
     icon: XCircle,
   },
-  {
-    key: "logged",
-    label: "Logged User",
-    icon: CheckCircle,
-  },
+
 ];
 
 const Restaurant = () => {

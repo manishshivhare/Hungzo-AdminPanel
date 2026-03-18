@@ -85,6 +85,7 @@ const LiveOrderTable = () => {
         res = await getAllOrders();
       } else if (user?.role === "ADMIN") {
         res = await getAdminOrders();
+         console.log(res);
       } else {
         return;
       }
@@ -401,11 +402,17 @@ const OrderDetailsModal = ({ order, onClose, onPrintInvoice }) => (
         <div className="space-y-1">
           <p>
             <strong>Customer:</strong>{" "}
-            {order.userDetails?.phone || "N/A"}
+            {order.user?.restaurantId?.ownerName || "******"}
           </p>
           <p>
-            <strong>Customer:</strong>{" "}
-            {order.userDetails?.name || "******"}
+            <strong>Restaurant Name:</strong>{" "}
+            {console.log(order)
+            }
+            {order.user?.restaurantId?.name || "******"}
+          </p>
+          <p>
+            <strong>Customer Num.:</strong>{" "}
+            {order.userDetails?.phone || "N/A"}
           </p>
           <p>
             <strong>Address:</strong> {order.shippingAddress}

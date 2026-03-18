@@ -42,7 +42,7 @@ const DriversVerifi = () => {
       const res = await DriversList();
       // Ensure we have an array and handle nested data
       const driversData = Array.isArray(res) ? res : [];
-      console.log("Fetched drivers:", driversData); // For debugging
+      // console.log("Fetched drivers:", driversData);
       setDrivers(driversData);
     } catch (error) {
       console.error("Fetch error:", error);
@@ -112,7 +112,7 @@ const DriversVerifi = () => {
             Driver Management
           </h2>
           <p className="text-sm text-slate-500">
-            Total Drivers: {drivers.length} | Pending: {pendingCount} 
+            Total Drivers Pending: {pendingCount} 
           </p>
         </div>
 
