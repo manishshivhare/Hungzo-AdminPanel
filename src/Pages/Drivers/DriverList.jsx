@@ -3,6 +3,7 @@ import { DriverApproved as getApprovedDrivers } from "../../Api";
 import { User, CheckCircle, Search, Download, Eye, Phone, Car, Bike, X, MapPin, IdCard, Calendar, Activity, Truck, FileText, Mail, Award, Clock, Navigation, ShieldCheck, Wifi, Maximize2, MoveUpRightIcon, } from "lucide-react";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
+import { useAuth } from "../../Context/AuthProvider";
 
 const DriverList = () => {
   const [drivers, setDrivers] = useState([]);
@@ -70,6 +71,7 @@ const DriverList = () => {
       toast.error("Driver phone number not available");
     }
   }
+
 
   if (loading) {
     return (
@@ -250,7 +252,7 @@ const DriverList = () => {
 /* ================= MODAL COMPONENT ================= */
 const DriverDetailsModal = ({ driver, onClose, onContact }) => {
   const [selectedImage, setSelectedImage] = useState(null);
-
+  const { logout  } = useAuth();
   return (
     <>
       <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={onClose}>
@@ -441,6 +443,14 @@ const DriverDetailsModal = ({ driver, onClose, onContact }) => {
                       />
                     </div>
                   </div>
+                  <div className="bg-gray-50 rounded-xl p-5">
+                    <h4 className="text-sm font-medium text-gray-500 mb-2">Temporary block</h4>
+                  </div>
+                  <button
+                    onClick={() => {logout(); toast.error("Driver Blocked");}}
+                    className=" w-full bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded">
+                    Block Driver
+                  </button>
                 </div>
               )}
 
