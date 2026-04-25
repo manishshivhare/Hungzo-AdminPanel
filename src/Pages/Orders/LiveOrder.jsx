@@ -17,32 +17,14 @@ const formatTime = (iso) =>
 
 const POLL_INTERVAL = 60000;
 
-const DELIVERY_TRANSITIONS = {
-  Pending: ["Accepted", "Cancelled"],
-  Accepted: ["Packed", "Cancelled"],
-  Packed: ["Out for Delivery", "Delivered", "Cancelled"],
-  "Out for Delivery": ["Delivered", "Cancelled"],
-  Delivered: [],
-  Cancelled: [],
-};
-
-const SELF_PICKUP_TRANSITIONS = {
-  Pending: ["Accepted", "Cancelled"],
-  Accepted: ["Delivered", "Cancelled"],
-  Packed: ["Delivered", "Cancelled"],
-  "Out for Delivery": ["Delivered", "Cancelled"],
-  Delivered: [],
-  Cancelled: [],
-};
-
-const getAvailableStatuses = (order) => {
-  const transitions =
-    order.fulfillmentType === "DELIVERY"
-      ? DELIVERY_TRANSITIONS
-      : SELF_PICKUP_TRANSITIONS;
-
-  return transitions[order.orderStatus] || [];
-};
+const ORDER_STATUS_OPTIONS = [
+  "Pending",
+  "Accepted",
+  "Packed",
+  "Out for Delivery",
+  "Delivered",
+  "Cancelled",
+];
 
 /* ================= 🔔 NOTIFICATION SOUND ================= */
 const playNewOrderSound = () => {
@@ -97,6 +79,7 @@ const LiveOrderTable = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [statusDrafts, setStatusDrafts] = useState({});
   // console.log(orders);
 
   /* 🔔 notification state */
@@ -121,6 +104,13 @@ const LiveOrderTable = () => {
 
       const fetchedOrders = res.data.orders || [];
       setOrders(fetchedOrders);
+      setStatusDrafts((prev) => {
+        const next = { ...prev };
+        fetchedOrders.forEach((order) => {
+          next[order._id] = next[order._id] || order.orderStatus;
+        });
+        return next;
+      });
 
       /* 🔔 NEW ORDER DETECTION */
       if (
@@ -161,8 +151,13 @@ const LiveOrderTable = () => {
       return;
     }
 
-    if (!getAvailableStatuses(order).includes(newStatus)) {
-      toast.error(`Cannot move ${order.orderStatus} to ${newStatus}`);
+    if (!ORDER_STATUS_OPTIONS.includes(newStatus)) {
+      toast.error(`Invalid status: ${newStatus}`);
+      return;
+    }
+
+    if (order.orderStatus === newStatus) {
+      toast.error("Order is already in that status");
       return;
     }
 
@@ -179,9 +174,17 @@ const LiveOrderTable = () => {
     if (!res.ok) {
       toast.error(res.message || "Failed to update");
       setOrders(previous);
+      setStatusDrafts((prev) => ({
+        ...prev,
+        [orderId]: order.orderStatus,
+      }));
       return;
     }
 
+    setStatusDrafts((prev) => ({
+      ...prev,
+      [orderId]: newStatus,
+    }));
     toast.success(`Status updated to ${newStatus}`);
   };
 
@@ -263,13 +266,9 @@ const LiveOrderTable = () => {
               )}
 
               {visibleOrders.map((order) => {
-                const nextStatuses = getAvailableStatuses(order);
-                const canCancel = nextStatuses.includes("Cancelled");
-                const canAccept = nextStatuses.includes("Accepted");
-                const canPack = nextStatuses.includes("Packed");
-                const canDispatch = nextStatuses.includes("Out for Delivery");
-                const canDeliver = nextStatuses.includes("Delivered");
-                const isPickup = order.fulfillmentType === "SELF_PICKUP";
+                const selectedStatus =
+                  statusDrafts[order._id] ?? order.orderStatus;
+                const disableUpdate = selectedStatus === order.orderStatus;
 
                 return (
                   <tr
@@ -300,75 +299,33 @@ const LiveOrderTable = () => {
                       className="p-3 space-y-1 text-center"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {nextStatuses.length === 0 ? (
-                        <div className="text-xs text-gray-500 py-1">
-                          No actions
-                        </div>
-                      ) : (
-                        <>
-                          {canAccept && (
-                            <button
-                              onClick={() =>
-                                updateStatus(order._id, "Accepted")
-                              }
-                              className="block w-full bg-yellow-500 text-white text-xs py-1 rounded"
-                            >
-                              Accept
-                            </button>
-                          )}
-
-                          {canPack && (
-                            <button
-                              onClick={() =>
-                                updateStatus(order._id, "Packed")
-                              }
-                              className="block w-full bg-blue-500 text-white text-xs py-1 rounded"
-                            >
-                              Mark Packed
-                            </button>
-                          )}
-
-                          {canDispatch && (
-                            <button
-                              onClick={() =>
-                                updateStatus(
-                                  order._id,
-                                  "Out for Delivery"
-                                )
-                              }
-                              className="block w-full bg-orange-500 text-white text-xs py-1 rounded"
-                            >
-                              {isPickup ? "Ready to Deliver" : "Out for Delivery"}
-                            </button>
-                          )}
-
-                          {canDeliver && (
-                            <button
-                              onClick={() =>
-                                updateStatus(order._id, "Delivered")
-                              }
-                              className="block w-full bg-green-600 text-white text-xs py-1 rounded"
-                            >
-                              Mark Delivered
-                            </button>
-                          )}
-
-                          {canCancel && (
-                            <button
-                              onClick={() => {
-                                if (
-                                  !window.confirm("Cancel this order?")
-                                )
-                                  return;
-                                updateStatus(order._id, "Cancelled");
-                              }}
-                              className="block w-full bg-red-500 text-white text-xs py-1 rounded"
-                            >
-                              Cancel
-                            </button>
-                          )}
-                        </>
-                      )}
+                      <select
+                        value={selectedStatus}
+                        onChange={(e) =>
+                          setStatusDrafts((prev) => ({
+                            ...prev,
+                            [order._id]: e.target.value,
+                          }))
+                        }
+                        className="block w-full rounded border border-gray-300 px-2 py-1 text-xs"
+                      >
+                        {ORDER_STATUS_OPTIONS.map((status) => (
+                          <option key={status} value={status}>
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => updateStatus(order._id, selectedStatus)}
+                        disabled={disableUpdate}
+                        className={`block w-full text-white text-xs py-1 rounded ${
+                          disableUpdate
+                            ? "bg-gray-300 cursor-not-allowed"
+                            : "bg-slate-700 hover:bg-slate-800"
+                        }`}
+                      >
+                        Update Status
+                      </button>
                     </td>
                   </tr>
                 );
