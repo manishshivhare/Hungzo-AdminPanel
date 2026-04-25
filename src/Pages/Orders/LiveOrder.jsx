@@ -17,6 +17,33 @@ const formatTime = (iso) =>
 
 const POLL_INTERVAL = 60000;
 
+const DELIVERY_TRANSITIONS = {
+  Pending: ["Accepted", "Cancelled"],
+  Accepted: ["Packed", "Cancelled"],
+  Packed: ["Out for Delivery", "Delivered", "Cancelled"],
+  "Out for Delivery": ["Delivered", "Cancelled"],
+  Delivered: [],
+  Cancelled: [],
+};
+
+const SELF_PICKUP_TRANSITIONS = {
+  Pending: ["Accepted", "Cancelled"],
+  Accepted: ["Delivered", "Cancelled"],
+  Packed: ["Delivered", "Cancelled"],
+  "Out for Delivery": ["Delivered", "Cancelled"],
+  Delivered: [],
+  Cancelled: [],
+};
+
+const getAvailableStatuses = (order) => {
+  const transitions =
+    order.fulfillmentType === "DELIVERY"
+      ? DELIVERY_TRANSITIONS
+      : SELF_PICKUP_TRANSITIONS;
+
+  return transitions[order.orderStatus] || [];
+};
+
 /* ================= 🔔 NOTIFICATION SOUND ================= */
 const playNewOrderSound = () => {
   const audio = new Audio("/Alert.wav");
@@ -128,10 +155,14 @@ const LiveOrderTable = () => {
 
   /* ================= UPDATE STATUS ================= */
   const updateStatus = async (orderId, newStatus) => {
-    // ✅ Check if order is already "Out for Delivery"
     const order = orders.find(o => o._id === orderId);
-    if (order?.orderStatus === "Out for Delivery") {
-      toast.error("Cannot update status once order is out for delivery");
+    if (!order) {
+      toast.error("Order not found");
+      return;
+    }
+
+    if (!getAvailableStatuses(order).includes(newStatus)) {
+      toast.error(`Cannot move ${order.orderStatus} to ${newStatus}`);
       return;
     }
 
@@ -171,7 +202,7 @@ const LiveOrderTable = () => {
         return `${base} bg-yellow-100 text-yellow-800`;
       case "Accepted":
         return `${base} bg-purple-100 text-purple-800`;
-      case "Preparing":
+      case "Packed":
         return `${base} bg-blue-100 text-blue-800`;
       case "Out for Delivery":
         return `${base} bg-orange-100 text-orange-800`;
@@ -232,12 +263,13 @@ const LiveOrderTable = () => {
               )}
 
               {visibleOrders.map((order) => {
-                // ✅ Check if order can be updated (not "Out for Delivery")
-                const canUpdate = order.orderStatus !== "Out for Delivery";
-
-                const canCancel =
-                  (order.orderStatus === "Pending" ||
-                    order.orderStatus === "Accepted") && canUpdate;
+                const nextStatuses = getAvailableStatuses(order);
+                const canCancel = nextStatuses.includes("Cancelled");
+                const canAccept = nextStatuses.includes("Accepted");
+                const canPack = nextStatuses.includes("Packed");
+                const canDispatch = nextStatuses.includes("Out for Delivery");
+                const canDeliver = nextStatuses.includes("Delivered");
+                const isPickup = order.fulfillmentType === "SELF_PICKUP";
 
                 return (
                   <tr
@@ -268,14 +300,13 @@ const LiveOrderTable = () => {
                       className="p-3 space-y-1 text-center"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {/* ✅ "Out for Delivery" orders show no action buttons */}
-                      {order.orderStatus === "Out for Delivery" ? (
+                      {nextStatuses.length === 0 ? (
                         <div className="text-xs text-gray-500 py-1">
-                          Status Locked
+                          No actions
                         </div>
                       ) : (
                         <>
-                          {order.orderStatus === "Pending" && (
+                          {canAccept && (
                             <button
                               onClick={() =>
                                 updateStatus(order._id, "Accepted")
@@ -286,18 +317,18 @@ const LiveOrderTable = () => {
                             </button>
                           )}
 
-                          {order.orderStatus === "Accepted" && (
+                          {canPack && (
                             <button
                               onClick={() =>
-                                updateStatus(order._id, "Preparing")
+                                updateStatus(order._id, "Packed")
                               }
                               className="block w-full bg-blue-500 text-white text-xs py-1 rounded"
                             >
-                              Prepare
+                              Mark Packed
                             </button>
                           )}
 
-                          {order.orderStatus === "Preparing" && (
+                          {canDispatch && (
                             <button
                               onClick={() =>
                                 updateStatus(
@@ -307,7 +338,18 @@ const LiveOrderTable = () => {
                               }
                               className="block w-full bg-orange-500 text-white text-xs py-1 rounded"
                             >
-                              Dispatch
+                              {isPickup ? "Ready to Deliver" : "Out for Delivery"}
+                            </button>
+                          )}
+
+                          {canDeliver && (
+                            <button
+                              onClick={() =>
+                                updateStatus(order._id, "Delivered")
+                              }
+                              className="block w-full bg-green-600 text-white text-xs py-1 rounded"
+                            >
+                              Mark Delivered
                             </button>
                           )}
 
