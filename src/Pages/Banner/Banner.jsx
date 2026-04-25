@@ -7,7 +7,7 @@ const Banner = () => {
   const [activeView, setActiveView] = useState('add'); // 'list' or 'add'
 
   return (
-    <div className="h-screen bg-gray-50 p-4 md:p-6 overflow-y-hidden">
+    <div className="min-h-full bg-gray-50 p-4 md:p-6">
       {/* Header */}
       <div className="mb-6 border-b border-gray-200 pb-2  ">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">

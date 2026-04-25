@@ -3,6 +3,8 @@ import {
   getAllOrders,
   getAdminOrders,
   updateOrderStatus as updateOrderStatusAPI,
+  assignWarehouseToOrder as assignWarehouseToOrderAPI,
+  getWarehouses,
 } from "../../Api";
 import toast from "react-hot-toast";
 import { generateInvoice } from "./generateInvoice";
@@ -15,9 +17,17 @@ const formatTime = (iso) =>
     minute: "2-digit",
   });
 
+const formatFulfillmentType = (type) => {
+  if (!type) return "—";
+  return type
+    .split("_")
+    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+    .join(" ");
+};
+
 const POLL_INTERVAL = 60000;
 
-const ORDER_STATUS_OPTIONS = [
+const DELIVERY_ORDER_STATUS_OPTIONS = [
   "Pending",
   "Accepted",
   "Packed",
@@ -25,6 +35,18 @@ const ORDER_STATUS_OPTIONS = [
   "Delivered",
   "Cancelled",
 ];
+
+const SELF_PICKUP_ORDER_STATUS_OPTIONS = [
+  "Pending",
+  "Accepted",
+  "Packed",
+  "Picked by Customer",
+];
+
+const getOrderStatusOptions = (order) =>
+  order.fulfillmentType === "SELF_PICKUP"
+    ? SELF_PICKUP_ORDER_STATUS_OPTIONS
+    : DELIVERY_ORDER_STATUS_OPTIONS;
 
 /* ================= 🔔 NOTIFICATION SOUND ================= */
 const playNewOrderSound = () => {
@@ -80,6 +102,9 @@ const LiveOrderTable = () => {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [statusDrafts, setStatusDrafts] = useState({});
+  const [warehouses, setWarehouses] = useState([]);
+  const [warehouseDrafts, setWarehouseDrafts] = useState({});
+  const [assigningWarehouseId, setAssigningWarehouseId] = useState(null);
   // console.log(orders);
 
   /* 🔔 notification state */
@@ -108,6 +133,14 @@ const LiveOrderTable = () => {
         const next = { ...prev };
         fetchedOrders.forEach((order) => {
           next[order._id] = next[order._id] || order.orderStatus;
+        });
+        return next;
+      });
+      setWarehouseDrafts((prev) => {
+        const next = { ...prev };
+        fetchedOrders.forEach((order) => {
+          next[order._id] =
+            next[order._id] || order.warehouseAssignment?.warehouseId || "";
         });
         return next;
       });
@@ -143,6 +176,23 @@ const LiveOrderTable = () => {
     return () => clearInterval(timer);
   }, [user]);
 
+  useEffect(() => {
+    const loadWarehouseOptions = async () => {
+      const res = await getWarehouses();
+      if (res?.ok === false) {
+        toast.error(res.message || "Failed to load warehouses");
+        return;
+      }
+
+      const options = (res?.warehouses || res?.data?.warehouses || []).filter(
+        (warehouse) => warehouse.status === "open"
+      );
+      setWarehouses(options);
+    };
+
+    loadWarehouseOptions();
+  }, []);
+
   /* ================= UPDATE STATUS ================= */
   const updateStatus = async (orderId, newStatus) => {
     const order = orders.find(o => o._id === orderId);
@@ -151,7 +201,7 @@ const LiveOrderTable = () => {
       return;
     }
 
-    if (!ORDER_STATUS_OPTIONS.includes(newStatus)) {
+    if (!getOrderStatusOptions(order).includes(newStatus)) {
       toast.error(`Invalid status: ${newStatus}`);
       return;
     }
@@ -197,6 +247,35 @@ const LiveOrderTable = () => {
     }
   };
 
+  const assignWarehouse = async (orderId) => {
+    const warehouseId = warehouseDrafts[orderId];
+    if (!warehouseId) {
+      toast.error("Select a warehouse first");
+      return;
+    }
+
+    try {
+      setAssigningWarehouseId(orderId);
+      const res = await assignWarehouseToOrderAPI(orderId, warehouseId);
+
+      if (!res.ok) {
+        toast.error(res.message || "Failed to assign warehouse");
+        return;
+      }
+
+      const updatedOrder = res.data?.order;
+      setOrders((prev) =>
+        prev.map((order) => (order._id === orderId ? updatedOrder : order))
+      );
+      setSelectedOrder((current) =>
+        current?._id === orderId ? updatedOrder : current
+      );
+      toast.success("Warehouse assigned successfully");
+    } finally {
+      setAssigningWarehouseId(null);
+    }
+  };
+
   /* ================= STATUS BADGE ================= */
   const badge = (status) => {
     const base = "px-2 py-1 rounded-full text-xs font-semibold";
@@ -211,6 +290,8 @@ const LiveOrderTable = () => {
         return `${base} bg-orange-100 text-orange-800`;
       case "Delivered":
         return `${base} bg-green-100 text-green-800`;
+      case "Picked by Customer":
+        return `${base} bg-emerald-100 text-emerald-800`;
       case "Cancelled":
         return `${base} bg-red-100 text-red-800`;
       default:
@@ -221,6 +302,7 @@ const LiveOrderTable = () => {
   /* ================= ✅ UI FILTER (ONLY CHANGE) ================= */
   const visibleOrders = orders.filter(
     (order) =>
+      order.orderStatus !== "Picked by Customer" &&
       order.orderStatus !== "Delivered" &&
       order.orderStatus !== "Cancelled"
   );
@@ -250,6 +332,8 @@ const LiveOrderTable = () => {
                 <th className="p-3 text-left">Order ID</th>
                 <th className="p-3 text-left">Customer</th>
                 <th className="p-3 text-center">Total</th>
+                <th className="p-3 text-center">Fulfillment Type</th>
+                <th className="p-3 text-center">Warehouse</th>
                 <th className="p-3">Time</th>
                 <th className="p-3">Status</th>
                 <th className="p-3 text-center">Actions</th>
@@ -259,7 +343,7 @@ const LiveOrderTable = () => {
             <tbody className="divide-y">
               {visibleOrders.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="p-6 text-center text-gray-500">
+                  <td colSpan="8" className="p-6 text-center text-gray-500">
                     No active orders
                   </td>
                 </tr>
@@ -268,6 +352,7 @@ const LiveOrderTable = () => {
               {visibleOrders.map((order) => {
                 const selectedStatus =
                   statusDrafts[order._id] ?? order.orderStatus;
+                const availableStatusOptions = getOrderStatusOptions(order);
                 const disableUpdate = selectedStatus === order.orderStatus;
 
                 return (
@@ -285,6 +370,55 @@ const LiveOrderTable = () => {
                     </td>
                     <td className="p-3 font-semibold text-center">
                       ₹{order.totalAmount}
+                    </td>
+                    <td className="p-3 text-sm text-center">
+                      {formatFulfillmentType(order.fulfillmentType)}
+                    </td>
+                    <td
+                      className="p-3 text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {order.fulfillmentType === "SELF_PICKUP" ? (
+                        <div className="space-y-1">
+                          <select
+                            value={warehouseDrafts[order._id] ?? ""}
+                            onChange={(e) =>
+                              setWarehouseDrafts((prev) => ({
+                                ...prev,
+                                [order._id]: e.target.value,
+                              }))
+                            }
+                            className="block w-full rounded border border-gray-300 px-2 py-1 text-xs"
+                          >
+                            <option value="">Select warehouse</option>
+                            {warehouses.map((warehouse) => (
+                              <option key={warehouse._id} value={warehouse._id}>
+                                {warehouse.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => assignWarehouse(order._id)}
+                            disabled={assigningWarehouseId === order._id}
+                            className={`block w-full rounded py-1 text-xs text-white ${
+                              assigningWarehouseId === order._id
+                                ? "cursor-not-allowed bg-gray-300"
+                                : "bg-emerald-600 hover:bg-emerald-700"
+                            }`}
+                          >
+                            {assigningWarehouseId === order._id
+                              ? "Assigning..."
+                              : order.warehouseAssignment
+                              ? "Reassign"
+                              : "Assign"}
+                          </button>
+                          <div className="text-[11px] text-gray-500">
+                            {order.warehouseAssignment?.name || "Not assigned"}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="p-3 text-xs text-gray-500 text-center">
                       {formatTime(order.createdAt)}
@@ -309,7 +443,7 @@ const LiveOrderTable = () => {
                         }
                         className="block w-full rounded border border-gray-300 px-2 py-1 text-xs"
                       >
-                        {ORDER_STATUS_OPTIONS.map((status) => (
+                        {availableStatusOptions.map((status) => (
                           <option key={status} value={status}>
                             {status}
                           </option>
@@ -352,7 +486,11 @@ const LiveOrderTable = () => {
 };
 
 /* ================= MODAL ================= */
-const OrderDetailsModal = ({ order, onClose, onPrintInvoice }) => (
+const OrderDetailsModal = ({
+  order,
+  onClose,
+  onPrintInvoice,
+}) => (
   <div
     className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
     onClick={onClose}
@@ -416,8 +554,38 @@ const OrderDetailsModal = ({ order, onClose, onPrintInvoice }) => (
           <p>
             <strong>Address:</strong> {order.shippingAddress}
           </p>
+          {order.fulfillmentType === "SELF_PICKUP" ? (
+            <p>
+              <strong>Assigned Warehouse:</strong>{" "}
+              {order.warehouseAssignment?.name || "Not assigned"}
+            </p>
+          ) : null}
         </div>
       </div>
+
+      {order.fulfillmentType === "SELF_PICKUP" && order.warehouseAssignment ? (
+        <div className="border-b p-4">
+          <h3 className="mb-3 font-semibold">Self Pickup Warehouse</h3>
+          <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+            <p>
+              <strong>Name:</strong> {order.warehouseAssignment.name}
+            </p>
+            <p>
+              <strong>Address:</strong> {order.warehouseAssignment.fullAddress}
+            </p>
+            {order.warehouseAssignment.mapLink ? (
+              <a
+                href={order.warehouseAssignment.mapLink}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 inline-block text-blue-600 hover:text-blue-700"
+              >
+                Open Google Maps Link
+              </a>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {/* ITEMS */}
       <div className="p-3 border-b">

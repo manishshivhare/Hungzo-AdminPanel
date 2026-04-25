@@ -1,7 +1,7 @@
 import axios from "axios";
 
-const API_BASE = "https://api.hungzo.in";
-// const API_BASE = "http://192.168.1.39:4000";
+// const API_BASE = "https://api.hungzo.in";
+const API_BASE = "http://192.168.29.125:4000";
 
 const API = axios.create({
   baseURL: API_BASE,
@@ -28,6 +28,59 @@ export async function createAdmin(formData) {
       ok: false,
       message:
         error.response?.data?.message || "Failed to create admin",
+    };
+  }
+}
+
+// ================= WAREHOUSE ==================
+export async function getWarehouses() {
+  try {
+    const res = await API.get("/warehouses");
+    return res.data;
+  } catch (error) {
+    return {
+      ok: false,
+      success: false,
+      message: error.response?.data?.message || "Failed to fetch warehouses",
+    };
+  }
+}
+
+export async function createWarehouse(formData) {
+  try {
+    const res = await API.post("/warehouses/create", formData);
+    return res.data;
+  } catch (error) {
+    return {
+      ok: false,
+      success: false,
+      message: error.response?.data?.message || "Failed to create warehouse",
+    };
+  }
+}
+
+export async function updateWarehouse(id, formData) {
+  try {
+    const res = await API.put(`/warehouses/update/${id}`, formData);
+    return res.data;
+  } catch (error) {
+    return {
+      ok: false,
+      success: false,
+      message: error.response?.data?.message || "Failed to update warehouse",
+    };
+  }
+}
+
+export async function deleteWarehouse(id) {
+  try {
+    const res = await API.delete(`/warehouses/delete/${id}`);
+    return res.data;
+  } catch (error) {
+    return {
+      ok: false,
+      success: false,
+      message: error.response?.data?.message || "Failed to delete warehouse",
     };
   }
 }
@@ -456,6 +509,18 @@ export async function updateOrderStatus(orderId, status) {
     return {
       ok: false,
       message: error.response?.data?.message || "Failed to update order status",
+    };
+  }
+}
+
+export async function assignWarehouseToOrder(orderId, warehouseId) {
+  try {
+    const res = await API.put(`/orders/warehouse/${orderId}`, { warehouseId });
+    return { ok: true, data: res.data };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error.response?.data?.message || "Failed to assign warehouse",
     };
   }
 }

@@ -21,6 +21,7 @@ import Notification from './Pages/notification/Notification'
 import Rules from './Pages/Rules/Rules'
 import Restaurant from './Pages/Restaurant/Restaurant'
 import DriverOrder from './Pages/Drivers/DriverOrder'
+import Warehouse from './Pages/Warehouse/Warehouse'
 
 export default function App() {
   const location = useLocation()
@@ -29,17 +30,17 @@ export default function App() {
   // Hide sidebar + header on login page
 
   return (
-    <div className="h-screen w-screen flex overflow-hidden bg-gray-100">
+    <div className="h-screen w-full flex overflow-hidden bg-gray-100">
 
       <Toaster position="top-center" />
 
       {/* Sidebar visible only when logged in */}
       {!noSidebar && <Sidebar />}
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
 
         {/* REMOVE PADDING → full area */}
-        <main className="flex-1 w-full h-full ">
+        <main className="flex-1 w-full min-w-0 overflow-y-auto overflow-x-hidden">
           <Routes>
 
             {/* Public */}
@@ -63,6 +64,7 @@ export default function App() {
             <Route path='/product' element={<ProtectedRoute><ProductsList /></ProtectedRoute>} />
             <Route path='/add-product' element={<ProtectedRoute><AddProduct /></ProtectedRoute>} />
             <Route path='/banner' element={<ProtectedRoute><Banner /></ProtectedRoute>} />
+            <Route path='/warehouse' element={<ProtectedRoute><Warehouse /></ProtectedRoute>} />
             <Route path='/driver-orders/:driverId' element={<DriverOrder />} />
 
             {/* 404 */}

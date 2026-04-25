@@ -7,7 +7,7 @@ const Notification = () => {
   const [activeView, setActiveView] = useState('send'); // 'send' or 'history'
 
   return (
-    <div className="h-screen bg-gray-50 p-4 md:p-6 overflow-y-hidden">
+    <div className="min-h-full bg-gray-50 p-4 md:p-6">
       {/* Header */}
       <div className="mb-6 border-b border-gray-200 pb-2">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -53,7 +53,7 @@ const Notification = () => {
       </div>
 
       {/* Content Area */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-[calc(100vh-240px)]">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         {activeView === 'send' ? <SendNotification /> : <HistoryNotification />}
       </div>
 

@@ -41,6 +41,14 @@ const getStatusIcon = (status) => {
 const getPaymentColor = (method) =>
   method === "COD" ? "text-orange-600" : "text-green-600";
 
+const formatFulfillmentType = (type) => {
+  if (!type) return "—";
+  return type
+    .split("_")
+    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+    .join(" ");
+};
+
 /* ================= CSV EXPORT HELPERS ================= */
 const convertToCSV = (data) => {
   const headers = [
@@ -54,6 +62,7 @@ const convertToCSV = (data) => {
     "Time",
     "Total Amount (₹)",
     "Payment Method",
+    "Fulfillment Type",
     "Sub Total (₹)",
     "GST Amount (₹)",
     "Delivery Charge (₹)",
@@ -74,6 +83,7 @@ const convertToCSV = (data) => {
     order.time,
     order.total.replace("₹", ""),
     order.payment,
+    order.fulfillmentType,
     order.raw.subTotal || 0,
     order.raw.gstAmount || 0,
     order.raw.deliveryCharge || 0,
@@ -119,6 +129,7 @@ const exportToExcel = (data, filename) => {
       'Time': order.time,
       'Amount': order.total.replace('₹', ''),
       'Payment Method': order.payment,
+      'Fulfillment Type': order.fulfillmentType,
       'Sub Total': order.raw.subTotal || 0,
       'GST': order.raw.gstAmount || 0,
       'Delivery Charge': order.raw.deliveryCharge || 0
@@ -250,12 +261,16 @@ const OrderHistory = () => {
           customerName: o.user?.restaurantId?.name || o.user?.name || "—",
           email: o.userDetails?.email || o.user?.email || "—",
           phone: o.userDetails?.phone || o.user?.phone || o.shippingAddress?.phone || "—",
-          status: o.orderStatus === "Delivered" ? "Completed" : o.orderStatus,
+          status:
+            o.orderStatus === "Delivered" || o.orderStatus === "Picked by Customer"
+              ? "Completed"
+              : o.orderStatus,
           date: formatDate(o.createdAt),
           time: formatTime(o.createdAt),
           total: `₹${o.totalAmount}`,
           totalValue: o.totalAmount,
           payment: o.paymentMethod,
+          fulfillmentType: formatFulfillmentType(o.fulfillmentType),
           raw: o,
         }));
 
@@ -670,13 +685,14 @@ const OrderHistory = () => {
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fulfillment Type</th>
             </tr>
           </thead>
           <tbody>
             {Object.entries(groupedOrders).map(([date, list]) => (
               <React.Fragment key={date}>
                 <tr className="bg-gray-100">
-                  <td colSpan="7" className="px-4 py-2 font-semibold">
+                  <td colSpan="8" className="px-4 py-2 font-semibold">
                     📅 {date} <span className="text-gray-600 font-normal">({list.length} orders, ₹{list.reduce((sum, o) => sum + o.totalValue, 0).toFixed(2)})</span>
                   </td>
                 </tr>
@@ -716,6 +732,9 @@ const OrderHistory = () => {
                       <span className={`text-xs font-medium ${getPaymentColor(o.payment)}`}>
                         {o.payment === 'COD' ? '💵' : '💳'} {o.payment}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-sm">{o.fulfillmentType}</span>
                     </td>
                   </tr>
                 ))}
@@ -814,6 +833,10 @@ const OrderModal = ({ order, onClose, onDownloadInvoice, invoiceLoading }) => {
           <DetailRow
             label="Payment"
             value={<span className={getPaymentColor(order.payment)}>{order.payment}</span>}
+          />
+          <DetailRow
+            label="Fulfillment Type"
+            value={formatFulfillmentType(order.raw.fulfillmentType)}
           />
           <DetailRow label="Total" value={<span className="font-bold">{order.total}</span>} />
 

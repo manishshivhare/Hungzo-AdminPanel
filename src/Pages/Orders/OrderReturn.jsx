@@ -29,6 +29,14 @@ import {
 } from "lucide-react";
 import { getReturnOrders, updateReturnStatus } from "../../Api/index";
 
+const formatFulfillmentType = (type) => {
+  if (!type) return "—";
+  return type
+    .split("_")
+    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+    .join(" ");
+};
+
 const OrderReturn = () => {
   const [returns, setReturns] = useState([]);
   const [filteredReturns, setFilteredReturns] = useState([]);
@@ -209,7 +217,7 @@ const OrderReturn = () => {
   const stats = getStats();
 
   return (
-    <div className="h-screen bg-gray-50 overflow-hidden ">
+    <div className="min-h-full bg-gray-50 pb-4">
       {/* Header */}
       <div className=" ">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-1">
@@ -348,6 +356,9 @@ const OrderReturn = () => {
                     <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Customer</span>
                   </th>
                   <th className="py-3 px-4 text-left">
+                    <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Fulfillment Type</span>
+                  </th>
+                  <th className="py-3 px-4 text-left">
                     <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</span>
                   </th>
                   <th className="py-3 px-4 text-center">
@@ -387,6 +398,12 @@ const OrderReturn = () => {
                           <p className="text-xs text-gray-500 truncate max-w-[120px]">{ret.user?.email || ''}</p>
                         </div>
                       </div>
+                    </td>
+
+                    <td className="py-4 px-4">
+                      <span className="text-sm font-medium text-gray-900">
+                        {formatFulfillmentType(ret.order?.fulfillmentType || ret.fulfillmentType)}
+                      </span>
                     </td>
 
                     <td className="py-4 px-4">

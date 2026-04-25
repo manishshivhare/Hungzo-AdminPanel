@@ -10,6 +10,7 @@ import {
   UserPlusIcon,
   ArrowRightOnRectangleIcon,
   BellAlertIcon,
+  BuildingStorefrontIcon,
 } from "@heroicons/react/24/solid";
 import logo from "../assets/Logo.png";
 import { useAuth } from "../Context/AuthProvider";
@@ -23,6 +24,7 @@ const adminMenu = [
   { to: "/Add-product", label: "Add Product", icon: CubeIcon },
   // { to: "/profile", label: "Profile", icon: UserGroupIcon },
   { to: "/banner", label: "Banner", icon: ArchiveBoxIcon },
+  { to: "/warehouse", label: "Warehouse", icon: BuildingStorefrontIcon },
   { to: "/notification", label: "notification", icon: BellAlertIcon },
   { to: "/Terms", label: "(T&Cs)", icon: Scale },
   { to: "/logout", label: "Logout", icon: ArrowRightOnRectangleIcon },
@@ -38,6 +40,7 @@ const superAdminMenu = [
   { to: "/admin", label: "Admins", icon: UserGroupIcon },
   { to: "/add-admin", label: "Add Admin", icon: UserPlusIcon },
   { to: "/banner", label: "Banner", icon: ArchiveBoxIcon },
+  { to: "/warehouse", label: "Warehouse", icon: BuildingStorefrontIcon },
   { to: "/notification", label: "notification", icon: BellAlertIcon },
   { to: "/walletDetails", label: "Wallet", icon: Wallet },
   { to: "/Terms", label: "(T&Cs)", icon: Scale },
@@ -56,9 +59,9 @@ export default function Sidebar() {
   const menuItems = user.role === "SUPERADMIN" ? superAdminMenu : user.role === "ADMIN" ? adminMenu : [];
 
   return (
-    <aside className="w-64 bg-[#0a0b0bde] text-white h-screen px-6 py-7 flex flex-col justify-between">
+    <aside className="sticky top-0 h-screen w-64 shrink-0 bg-[#0a0b0bde] px-6 py-7 text-white">
       {/* -------------------- TOP -------------------- */}
-      <div>
+      <div className="flex h-full flex-col">
         <Link to="/">
           <div className="flex items-center gap-3 mb-2">
             <img
@@ -72,7 +75,7 @@ export default function Sidebar() {
 
         {/* Scrollable navigation with hidden scrollbar */}
         <div
-          className="h-[77vh] overflow-y-auto"
+          className="min-h-0 flex-1 overflow-y-auto"
           style={{
             scrollbarWidth: 'none', // Firefox
             msOverflowStyle: 'none', // IE/Edge
@@ -100,16 +103,14 @@ export default function Sidebar() {
             })}
           </nav>
         </div>
-      </div>
-
-      {/* -------------------- FOOTER -------------------- */}
-      <div className="text-center m-4 flex flex-col items-center">
-        <img src={logo} alt="logo" className="w-8 h-8" />
-        <div className="mt-2 text-xs text-white/60">
-          © {new Date().getFullYear()} Hungzo Admin Panel
+        <div className="mt-auto pt-6 text-center flex flex-col items-center">
+          <img src={logo} alt="logo" className="w-8 h-8" />
+          <div className="mt-2 text-xs text-white/60">
+            © {new Date().getFullYear()} Hungzo Admin Panel
+          </div>
         </div>
       </div>
-
+      
       {/* Inline CSS for Webkit browsers (Chrome, Safari, Edge) */}
       <style>{`
         /* Hide scrollbar for Webkit browsers */
