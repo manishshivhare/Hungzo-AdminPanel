@@ -49,6 +49,7 @@ export default function App() {
 
             {/* Protected */}
             <Route path="/" element={<ProtectedRoute><OrdersPage/></ProtectedRoute>} />
+            {/* <Route path="/payment" element={<ProtectedRoute><Transaction /></ProtectedRoute>} /> */}
             <Route path="/walletDetails" element={<ProtectedRoute><WalletsDetails /></ProtectedRoute>} />
             <Route path="/wallet/:userId" element={<RestaurantsWallet />} />
             <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
