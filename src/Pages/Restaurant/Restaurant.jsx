@@ -73,7 +73,7 @@
 
 
 
-// New Updates this is for Users Page
+// New Updates this is for Users page
 
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
