@@ -55,6 +55,34 @@ const formatFulfillmentType = (type) => {
     .join(" ");
 };
 
+const deriveRefundMeta = (order) => {
+  if (!order) {
+    return { refundStatus: "NOT_APPLICABLE", refundAmount: 0 };
+  }
+
+  if (order.refundStatus === "APPROVED") {
+    return {
+      refundStatus: "APPROVED",
+      refundAmount: Number(order.refundAmount || 0),
+    };
+  }
+
+  if (order.orderStatus !== "Cancelled") {
+    return { refundStatus: "NOT_APPLICABLE", refundAmount: 0 };
+  }
+
+  const paidAmount =
+    order.paymentStatus === "paid" ? Number(order.totalAmount || 0) : 0;
+  const walletAmount =
+    order.paymentStatus !== "paid" ? Number(order.walletUsed || 0) : 0;
+  const refundAmount = paidAmount > 0 ? paidAmount : walletAmount;
+
+  return {
+    refundStatus: refundAmount > 0 ? "PENDING" : "NOT_APPLICABLE",
+    refundAmount,
+  };
+};
+
 /* ================= CSV EXPORT HELPERS ================= */
 const convertToCSV = (data) => {
   const headers = [
@@ -225,7 +253,10 @@ const OrderHistory = () => {
     }
   };
 
-  const mapOrder = (o) => ({
+  const mapOrder = (o) => {
+    const refundMeta = deriveRefundMeta(o);
+
+    return ({
     id: o._id,
     items: o.items
       .map((i) => `${i.productName} (${i.varietyName}) × ${i.quantity}`)
@@ -234,7 +265,7 @@ const OrderHistory = () => {
     email: o.userDetails?.email || o.user?.email || "—",
     phone: o.userDetails?.phone || o.user?.phone || o.shippingAddress?.phone || "—",
     status:
-      o.refundStatus === "APPROVED"
+      refundMeta.refundStatus === "APPROVED"
         ? "Refunded"
         : o.orderStatus === "Delivered" || o.orderStatus === "Picked by Customer"
           ? "Completed"
@@ -245,8 +276,13 @@ const OrderHistory = () => {
     totalValue: o.totalAmount,
     payment: o.paymentMethod,
     fulfillmentType: formatFulfillmentType(o.fulfillmentType),
-    raw: o,
+    raw: {
+      ...o,
+      refundStatus: refundMeta.refundStatus,
+      refundAmount: refundMeta.refundAmount,
+    },
   });
+  };
 
   const loadData = useCallback(async () => {
     if (!user?.role) return;
@@ -267,19 +303,21 @@ const OrderHistory = () => {
 
       const mapped = res.data.orders.map(mapOrder);
       setOrders(mapped);
+      setSelectedOrder((currentSelectedOrder) => {
+        if (!currentSelectedOrder) return null;
 
-      if (selectedOrder) {
-        const refreshedSelectedOrder = mapped.find(
-          (mappedOrder) => mappedOrder.id === selectedOrder.id
+        return (
+          mapped.find(
+            (mappedOrder) => mappedOrder.id === currentSelectedOrder.id
+          ) || null
         );
-        setSelectedOrder(refreshedSelectedOrder || null);
-      }
+      });
     } catch {
       toast.error("Failed to load data");
     } finally {
       setLoading(false);
     }
-  }, [selectedOrder, user]);
+  }, [user]);
 
   /* ================= LOAD ORDERS ================= */
   useEffect(() => {
@@ -539,7 +577,7 @@ const OrderHistory = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-1 h-screen overflow-y-auto">
+    <div className="min-h-screen bg-gray-50 p-3 md:p-4">
       {/* ================= HEADER ================= */}
       <div className="bg-white rounded-lg shadow-sm p-4 mb-2">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-1">
@@ -690,11 +728,12 @@ const OrderHistory = () => {
       </div>
 
       {/* ================= TABLE ================= */}
-      <div
-        ref={tableContainerRef}
-        className="bg-white rounded-xl shadow h-[100vh] mb-1 overflow-y-auto"
-      >
-        <table className="w-full">
+      <div className="bg-white rounded-xl shadow mb-1 overflow-hidden">
+        <div
+          ref={tableContainerRef}
+          className="max-h-[70vh] overflow-auto"
+        >
+          <table className="w-full min-w-[980px]">
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order Details</th>
@@ -707,60 +746,61 @@ const OrderHistory = () => {
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fulfillment Type</th>
             </tr>
           </thead>
-          <tbody>
-            {Object.entries(groupedOrders).map(([date, list]) => (
-              <React.Fragment key={date}>
-                <tr className="bg-gray-100">
-                  <td colSpan="8" className="px-4 py-2 font-semibold">
-                    📅 {date} <span className="text-gray-600 font-normal">({list.length} orders, ₹{list.reduce((sum, o) => sum + o.totalValue, 0).toFixed(2)})</span>
-                  </td>
-                </tr>
-              
-                {list.map((o) => (
-                  <tr
-                    key={o.id}
-                    onClick={() => setSelectedOrder(o)}
-                    className="hover:bg-blue-50 cursor-pointer border-b transition-colors"
-                  >
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-sm">{o.id.slice(-8)}</p>
-                      <p className="text-xs text-gray-500 truncate max-w-[200px]" title={o.items}>
-                        {o.items}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-medium">{o.customerName}</p>
-                      <p className="text-xs text-gray-500">{o.email}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm">{o.phone}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm">{o.date}</p>
-                      <p className="text-xs text-gray-500">{o.time}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="font-bold text-sm">{o.total}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(o.status)}`}>
-                        {getStatusIcon(o.status)} {o.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs font-medium ${getPaymentColor(o.payment)}`}>
-                        {o.payment === 'COD' ? '💵' : '💳'} {o.payment}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm">{o.fulfillmentType}</span>
+            <tbody>
+              {Object.entries(groupedOrders).map(([date, list]) => (
+                <React.Fragment key={date}>
+                  <tr className="bg-gray-100">
+                    <td colSpan="8" className="px-4 py-2 font-semibold">
+                      📅 {date} <span className="text-gray-600 font-normal">({list.length} orders, ₹{list.reduce((sum, o) => sum + o.totalValue, 0).toFixed(2)})</span>
                     </td>
                   </tr>
-                ))}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
+                
+                  {list.map((o) => (
+                    <tr
+                      key={o.id}
+                      onClick={() => setSelectedOrder(o)}
+                      className="hover:bg-blue-50 cursor-pointer border-b transition-colors"
+                    >
+                      <td className="px-4 py-3 align-top">
+                        <p className="font-semibold text-sm">{o.id.slice(-8)}</p>
+                        <p className="text-xs text-gray-500 max-w-[220px] whitespace-normal break-words" title={o.items}>
+                          {o.items}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <p className="text-sm font-medium">{o.customerName}</p>
+                        <p className="text-xs text-gray-500 break-all">{o.email}</p>
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <p className="text-sm">{o.phone}</p>
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <p className="text-sm">{o.date}</p>
+                        <p className="text-xs text-gray-500">{o.time}</p>
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <p className="font-bold text-sm">{o.total}</p>
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(o.status)}`}>
+                          {getStatusIcon(o.status)} {o.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <span className={`text-xs font-medium ${getPaymentColor(o.payment)}`}>
+                          {o.payment === 'COD' ? '💵' : '💳'} {o.payment}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <span className="text-sm">{o.fulfillmentType}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {filteredOrders.length === 0 && (
           <div className="text-center py-16">
@@ -806,8 +846,7 @@ const OrderModal = ({
   refundLoading,
 }) => {
   const ref = useRef();
-  const refundStatus = order.raw.refundStatus || "NOT_APPLICABLE";
-  const refundAmount = Number(order.raw.refundAmount || 0);
+  const { refundStatus, refundAmount } = deriveRefundMeta(order.raw);
   const showApproveRefundButton =
     order.raw.orderStatus === "Cancelled" &&
     refundStatus === "PENDING" &&
@@ -827,19 +866,19 @@ const OrderModal = ({
   }, [onClose]);
 
   return (
-    <motion.div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
+      <motion.div
+        className="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      >
       <motion.div
         ref={ref}
         initial={{ scale: 0.9, y: 30 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 30 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
-        className="bg-white rounded-xl w-full max-w-xl p-6 relative"
+        className="relative mx-auto my-8 w-full max-w-3xl rounded-xl bg-white p-5 md:p-6"
       >
         <button
           onClick={onClose}
@@ -850,7 +889,7 @@ const OrderModal = ({
 
         <h3 className="text-lg font-bold mb-4">🧾 Order Details</h3>
 
-        <div className="space-y-3 text-sm">
+        <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1 text-sm">
           <DetailRow label="Order ID" value={order.id} />
           <DetailRow label="Customer" value={order.customerName} />
           <DetailRow label="Email" value={order.email} />
@@ -926,7 +965,7 @@ const OrderModal = ({
           )}
         </div>
 
-        <div className="flex justify-end gap-3 mt-6">
+        <div className="mt-6 flex flex-col-reverse gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:justify-end">
           {showApproveRefundButton && (
             <button
               onClick={() => onApproveRefund(order)}
@@ -974,9 +1013,9 @@ const OrderModal = ({
 
 /* ================= DETAIL ROW ================= */
 const DetailRow = ({ label, value }) => (
-  <div className="grid grid-cols-3 gap-2">
+  <div className="grid grid-cols-1 gap-1 border-b border-gray-100 pb-2 sm:grid-cols-3 sm:gap-2">
     <span className="font-semibold text-gray-600">{label}:</span>
-    <span className="col-span-2">{value}</span>
+    <span className="break-words sm:col-span-2">{value}</span>
   </div>
 );
 
