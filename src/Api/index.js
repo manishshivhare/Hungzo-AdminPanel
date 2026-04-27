@@ -513,6 +513,19 @@ export async function updateOrderStatus(orderId, status) {
   }
 }
 
+export async function approveOrderRefund(orderId) {
+  try {
+    const res = await API.post(`/orders/${orderId}/refund/approve`);
+    return { ok: true, data: res.data };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to approve order refund",
+    };
+  }
+}
+
 export async function assignWarehouseToOrder(orderId, warehouseId) {
   try {
     const res = await API.put(`/orders/warehouse/${orderId}`, { warehouseId });

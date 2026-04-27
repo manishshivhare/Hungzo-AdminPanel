@@ -1,9 +1,15 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../Context/AuthProvider";
-import { getAllOrders, getAdminOrders, restaurantApproved, restaurantRejected, restaurantList } from "../../Api";
+import {
+  approveOrderRefund,
+  getAllOrders,
+  getAdminOrders,
+} from "../../Api";
 import { generateInvoice } from "./generateInvoice";
 import toast from "react-hot-toast";
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
+import * as XLSX from "xlsx";
 
 /* ================= HELPERS ================= */
 const formatDate = (iso) =>
@@ -182,14 +188,13 @@ const OrderHistory = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [refundLoading, setRefundLoading] = useState(false);
 
   // Professional filter state
   const [selectedCategory, setSelectedCategory] = useState('');
   const [filterValue, setFilterValue] = useState('');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [amountRange, setAmountRange] = useState({ min: '', max: '' });
-
-  const [restaurants, setRestaurants] = useState([]);
 
   // Ref for table container
   const tableContainerRef = useRef(null);
@@ -220,72 +225,66 @@ const OrderHistory = () => {
     }
   };
 
-  /* ================= LOAD ORDERS ================= */
-  useEffect(() => {
+  const mapOrder = (o) => ({
+    id: o._id,
+    items: o.items
+      .map((i) => `${i.productName} (${i.varietyName}) × ${i.quantity}`)
+      .join(", "),
+    customerName: o.user?.restaurantId?.name || o.user?.name || "—",
+    email: o.userDetails?.email || o.user?.email || "—",
+    phone: o.userDetails?.phone || o.user?.phone || o.shippingAddress?.phone || "—",
+    status:
+      o.refundStatus === "APPROVED"
+        ? "Refunded"
+        : o.orderStatus === "Delivered" || o.orderStatus === "Picked by Customer"
+          ? "Completed"
+          : o.orderStatus,
+    date: formatDate(o.createdAt),
+    time: formatTime(o.createdAt),
+    total: `₹${o.totalAmount}`,
+    totalValue: o.totalAmount,
+    payment: o.paymentMethod,
+    fulfillmentType: formatFulfillmentType(o.fulfillmentType),
+    raw: o,
+  });
+
+  const loadData = useCallback(async () => {
     if (!user?.role) return;
 
-    const loadData = async () => {
-      try {
-        setLoading(true);
+    try {
+      setLoading(true);
 
-        // Load restaurants for email/phone dropdown
-        const restaurantRes = await restaurantApproved();
-        const restaurantRej = await restaurantRejected();
-        const restaurantPen = await restaurantList();
-        const newdata = [
-          ...restaurantRes,
-          ...restaurantRej,
-          ...restaurantPen
-        ];
-        setRestaurants(newdata);
-
-        // Load orders
-        let res;
-        if (user.role === "SUPERADMIN") {
-          res = await getAllOrders();
-        } else if (user.role === "ADMIN") {
-          res = await getAdminOrders();
-        
-         
-        } else {
-          return;
-        }
-
-        if (!res?.ok) throw new Error();
-
-        const mapped = res.data.orders.map((o) => ({
-          id: o._id,
-          items: o.items
-            .map((i) => `${i.productName} (${i.varietyName}) × ${i.quantity}`)
-            .join(", "),
-          customerName: o.user?.restaurantId?.name || o.user?.name || "—",
-          email: o.userDetails?.email || o.user?.email || "—",
-          phone: o.userDetails?.phone || o.user?.phone || o.shippingAddress?.phone || "—",
-          status:
-            o.orderStatus === "Delivered" || o.orderStatus === "Picked by Customer"
-              ? "Completed"
-              : o.orderStatus,
-          date: formatDate(o.createdAt),
-          time: formatTime(o.createdAt),
-          total: `₹${o.totalAmount}`,
-          totalValue: o.totalAmount,
-          payment: o.paymentMethod,
-          fulfillmentType: formatFulfillmentType(o.fulfillmentType),
-          raw: o,
-        }));
-
-        setOrders(mapped);
-        console.log("Loaded orders:", mapped);
-        
-      } catch (e) {
-        toast.error("Failed to load data");
-      } finally {
-        setLoading(false);
+      let res;
+      if (user.role === "SUPERADMIN") {
+        res = await getAllOrders();
+      } else if (user.role === "ADMIN") {
+        res = await getAdminOrders();
+      } else {
+        return;
       }
-    };
 
+      if (!res?.ok) throw new Error();
+
+      const mapped = res.data.orders.map(mapOrder);
+      setOrders(mapped);
+
+      if (selectedOrder) {
+        const refreshedSelectedOrder = mapped.find(
+          (mappedOrder) => mappedOrder.id === selectedOrder.id
+        );
+        setSelectedOrder(refreshedSelectedOrder || null);
+      }
+    } catch {
+      toast.error("Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedOrder, user]);
+
+  /* ================= LOAD ORDERS ================= */
+  useEffect(() => {
     loadData();
-  }, [user]);
+  }, [loadData]);
 
   /* ================= FILTER LOGIC ================= */
   const filteredOrders = useMemo(() => {
@@ -409,6 +408,24 @@ const OrderHistory = () => {
     }
   };
 
+  const handleApproveRefund = async (order) => {
+    try {
+      setRefundLoading(true);
+      const res = await approveOrderRefund(order.id);
+
+      if (!res?.ok) {
+        throw new Error(res?.message || "Failed to approve refund");
+      }
+
+      toast.success("Refund approved and credited to wallet");
+      await loadData();
+    } catch (error) {
+      toast.error(error.message || "Failed to approve refund");
+    } finally {
+      setRefundLoading(false);
+    }
+  };
+
   const clearFilters = () => {
     setSelectedCategory('');
     setFilterValue('');
@@ -490,21 +507,23 @@ const OrderHistory = () => {
         );
 
       default:
-        const options = getFilterOptions();
-        return (
-          <select
-            value={filterValue}
-            onChange={(e) => setFilterValue(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select {FILTER_CATEGORIES.find(c => c.id === selectedCategory)?.label}</option>
-            {options.map((option, index) => (
-              <option key={index} value={option.value}>
-                {option.icon && `${option.icon} `}{option.label}
-              </option>
-            ))}
-          </select>
-        );
+        {
+          const options = getFilterOptions();
+          return (
+            <select
+              value={filterValue}
+              onChange={(e) => setFilterValue(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select {FILTER_CATEGORIES.find(c => c.id === selectedCategory)?.label}</option>
+              {options.map((option, index) => (
+                <option key={index} value={option.value}>
+                  {option.icon && `${option.icon} `}{option.label}
+                </option>
+              ))}
+            </select>
+          );
+        }
     }
   };
 
@@ -767,7 +786,9 @@ const OrderHistory = () => {
             order={selectedOrder}
             onClose={() => setSelectedOrder(null)}
             onDownloadInvoice={handleDownloadInvoice}
+            onApproveRefund={handleApproveRefund}
             invoiceLoading={invoiceLoading}
+            refundLoading={refundLoading}
           />
         )}
       </AnimatePresence>
@@ -776,8 +797,21 @@ const OrderHistory = () => {
 };
 
 /* ================= MODAL ================= */
-const OrderModal = ({ order, onClose, onDownloadInvoice, invoiceLoading }) => {
+const OrderModal = ({
+  order,
+  onClose,
+  onDownloadInvoice,
+  onApproveRefund,
+  invoiceLoading,
+  refundLoading,
+}) => {
   const ref = useRef();
+  const refundStatus = order.raw.refundStatus || "NOT_APPLICABLE";
+  const refundAmount = Number(order.raw.refundAmount || 0);
+  const showApproveRefundButton =
+    order.raw.orderStatus === "Cancelled" &&
+    refundStatus === "PENDING" &&
+    refundAmount > 0;
 
   useEffect(() => {
     const esc = (e) => e.key === "Escape" && onClose();
@@ -839,6 +873,24 @@ const OrderModal = ({ order, onClose, onDownloadInvoice, invoiceLoading }) => {
             value={formatFulfillmentType(order.raw.fulfillmentType)}
           />
           <DetailRow label="Total" value={<span className="font-bold">{order.total}</span>} />
+          <DetailRow
+            label="Wallet Used"
+            value={<span>₹{Number(order.raw.walletUsed || 0).toFixed(2)}</span>}
+          />
+          <DetailRow
+            label="Payable Amount"
+            value={<span>₹{Number(order.raw.payableAmount || 0).toFixed(2)}</span>}
+          />
+          <DetailRow
+            label="Refund"
+            value={
+              refundStatus === "APPROVED"
+                ? `Approved • ₹${refundAmount.toFixed(2)}`
+                : refundStatus === "PENDING"
+                  ? `Pending approval • ₹${refundAmount.toFixed(2)}`
+                  : "Not applicable"
+            }
+          />
 
           <div className="mt-4">
             <p className="font-semibold mb-2">Order Items:</p>
@@ -859,19 +911,48 @@ const OrderModal = ({ order, onClose, onDownloadInvoice, invoiceLoading }) => {
               ))}
             </div>
           </div>
+
+          {(refundStatus === "PENDING" || refundStatus === "APPROVED") && (
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <p className="text-sm font-semibold text-amber-900">
+                Cancelled order refund
+              </p>
+              <p className="mt-1 text-sm text-amber-800">
+                {refundStatus === "APPROVED"
+                  ? `₹${refundAmount.toFixed(2)} has been credited to the user's wallet.`
+                  : `₹${refundAmount.toFixed(2)} is ready to be credited to the user's wallet after approval.`}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
+          {showApproveRefundButton && (
+            <button
+              onClick={() => onApproveRefund(order)}
+              disabled={refundLoading || invoiceLoading}
+              className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {refundLoading ? (
+                <>
+                  <span className="animate-spin">⏳</span>
+                  Approving...
+                </>
+              ) : (
+                <>Approve Refund to Wallet</>
+              )}
+            </button>
+          )}
           <button
             onClick={onClose}
             className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition font-medium"
-            disabled={invoiceLoading}
+            disabled={invoiceLoading || refundLoading}
           >
             Close
           </button>
           <button
             onClick={() => onDownloadInvoice(order)}
-            disabled={invoiceLoading}
+            disabled={invoiceLoading || refundLoading}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {invoiceLoading ? (
