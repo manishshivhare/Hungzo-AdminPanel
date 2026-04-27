@@ -22,6 +22,7 @@ import Rules from './Pages/Rules/Rules'
 import Restaurant from './Pages/Restaurant/Restaurant'
 import DriverOrder from './Pages/Drivers/DriverOrder'
 import Warehouse from './Pages/Warehouse/Warehouse'
+import UserOrders from './Pages/Orders/UserOrders'
 
 export default function App() {
   const location = useLocation()
@@ -53,6 +54,7 @@ export default function App() {
             <Route path="/walletDetails" element={<ProtectedRoute><WalletsDetails /></ProtectedRoute>} />
             <Route path="/wallet/:userId" element={<RestaurantsWallet />} />
             <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
+            <Route path="/orders/user/:userId" element={<ProtectedRoute><UserOrders /></ProtectedRoute>} />
             <Route path="/logout" element={<ProtectedRoute><LogoutPage /></ProtectedRoute>} />
             <Route path="/notification" element={<ProtectedRoute><Notification /></ProtectedRoute>} />
             <Route path="/restaurants" element={<ProtectedRoute><Restaurant/></ProtectedRoute>} />
