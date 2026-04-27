@@ -33,7 +33,7 @@ const adminMenu = [
 const superAdminMenu = [
   { to: "/product", label: "All Product", icon: CubeIcon },
   { to: "/Add-product", label: "Add Product", icon: CubeIcon },
-  { to: "/restaurants", label: "Restaurants", icon: BuildingOffice2Icon },
+  { to: "/restaurants", label: "Users", icon: BuildingOffice2Icon },
   { to: "/verification", label: "Verification", icon: ClipboardDocumentListIcon },
   { to: "/orders", label: "Orders", icon: ClipboardDocumentListIcon },
   { to: "/drivers", label: "Drivers", icon: TruckIcon },

@@ -1,7 +1,7 @@
 import axios from "axios";
 
-// const API_BASE = "https://api.hungzo.in";
-const API_BASE = "http://192.168.29.125:4000";
+const API_BASE = "https://api.hungzo.in";
+// const API_BASE = "http://192.168.1.50:4000";
 
 const API = axios.create({
   baseURL: API_BASE,
@@ -499,6 +499,21 @@ export async function getAllOrders() {
     };
   }
 }
+
+/* ================= GET ORDERS BY USER ================= */
+export async function getOrdersByUser(userId) {
+  try {
+    const res = await API.get(`/orders/admin/user/${userId}`);
+    return { ok: true, data: res.data };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to fetch user orders",
+    };
+  }
+}
+
 
 /* ================= UPDATE ORDER STATUS ================= */
 export async function updateOrderStatus(orderId, status) {
