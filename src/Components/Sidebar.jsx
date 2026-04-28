@@ -11,6 +11,7 @@ import {
   ArrowRightOnRectangleIcon,
   BellAlertIcon,
   BuildingStorefrontIcon,
+  ClockIcon,
 } from "@heroicons/react/24/solid";
 import logo from "../assets/Logo.png";
 import { useAuth } from "../Context/AuthProvider";
@@ -25,6 +26,7 @@ const adminMenu = [
   // { to: "/profile", label: "Profile", icon: UserGroupIcon },
   { to: "/banner", label: "Banner", icon: ArchiveBoxIcon },
   { to: "/warehouse", label: "Warehouse", icon: BuildingStorefrontIcon },
+  { to: "/business-hours", label: "Business Hours", icon: ClockIcon },
   { to: "/notification", label: "notification", icon: BellAlertIcon },
   { to: "/Terms", label: "(T&Cs)", icon: Scale },
   { to: "/logout", label: "Logout", icon: ArrowRightOnRectangleIcon },
@@ -41,6 +43,7 @@ const superAdminMenu = [
   { to: "/add-admin", label: "Add Admin", icon: UserPlusIcon },
   { to: "/banner", label: "Banner", icon: ArchiveBoxIcon },
   { to: "/warehouse", label: "Warehouse", icon: BuildingStorefrontIcon },
+  { to: "/business-hours", label: "Business Hours", icon: ClockIcon },
   { to: "/notification", label: "notification", icon: BellAlertIcon },
   { to: "/walletDetails", label: "Wallet", icon: Wallet },
   { to: "/Terms", label: "(T&Cs)", icon: Scale },

@@ -1,7 +1,7 @@
 import axios from "axios";
 
-const API_BASE = "https://api.hungzo.in";
-// const API_BASE = "http://192.168.1.50:4000";
+// const API_BASE = "https://api.hungzo.in";
+const API_BASE = "http://192.168.29.125:4000";
 
 const API = axios.create({
   baseURL: API_BASE,
@@ -142,6 +142,34 @@ export async function restaurantOnlyLogged() {
       message:
         error.response?.data?.message ||
         "Failed to fetch restaurant list",
+    };
+  }
+}
+
+export async function getStoreSettings() {
+  try {
+    const res = await API.get("/admin/store-settings");
+    return res.data;
+  } catch (error) {
+    return {
+      ok: false,
+      success: false,
+      message:
+        error.response?.data?.message || "Failed to fetch store settings",
+    };
+  }
+}
+
+export async function updateStoreSettings(payload) {
+  try {
+    const res = await API.put("/admin/store-settings", payload);
+    return res.data;
+  } catch (error) {
+    return {
+      ok: false,
+      success: false,
+      message:
+        error.response?.data?.message || "Failed to update store settings",
     };
   }
 }

@@ -23,6 +23,7 @@ import Restaurant from './Pages/Restaurant/Restaurant'
 import DriverOrder from './Pages/Drivers/DriverOrder'
 import Warehouse from './Pages/Warehouse/Warehouse'
 import UserOrders from './Pages/Orders/UserOrders'
+import BusinessHours from './Pages/BusinessHours/BusinessHours'
 
 export default function App() {
   const location = useLocation()
@@ -67,6 +68,7 @@ export default function App() {
             <Route path='/add-product' element={<ProtectedRoute><AddProduct /></ProtectedRoute>} />
             <Route path='/banner' element={<ProtectedRoute><Banner /></ProtectedRoute>} />
             <Route path='/warehouse' element={<ProtectedRoute><Warehouse /></ProtectedRoute>} />
+            <Route path='/business-hours' element={<ProtectedRoute><BusinessHours /></ProtectedRoute>} />
             <Route path='/driver-orders/:driverId' element={<DriverOrder />} />
 
             {/* 404 */}
