@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getUserTransactions } from '../../Api/index';
+import { getUserTransactions, creditWallet, debitWallet } from '../../Api/index';
+import toast from 'react-hot-toast';
 import { useParams } from 'react-router-dom';
 import {
     Search,
@@ -37,6 +38,11 @@ const RestaurantsWallet = () => {
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
     const [showCopyNotification, setShowCopyNotification] = useState(false);
     const [copiedId, setCopiedId] = useState('');
+    const [amount, setAmount] = useState('');
+    const [note, setNote] = useState('');
+    const [actionLoading, setActionLoading] = useState(false);
+    const [actionType, setActionType] = useState('credit');
+    const [currentBalance, setCurrentBalance] = useState(0);
 
     // Fetch transactions
     const fetchTransactions = async (page = 1, limit = 20) => {
@@ -53,7 +59,15 @@ const RestaurantsWallet = () => {
             const result = await getUserTransactions(userId, page, limit);
 
             if (result.ok) {
-                setTransactions(result.data.transactions || result.data.data || []);
+                // setTransactions(result.data.transactions || result.data.data || []);
+                const txns = result.data.transactions || result.data.data || [];
+                setTransactions(txns);
+
+                // SET BALANCE FROM LATEST TRANSACTION
+                if (txns.length > 0) {
+                    const latest = txns[0];
+                    setCurrentBalance(latest.closingBalance || latest.currentBalance || 0);
+                }
 
                 // Update pagination info
                 setPagination({
@@ -79,6 +93,65 @@ const RestaurantsWallet = () => {
             fetchTransactions();
         }
     }, [userId]);
+
+
+    // wallet credit / debit 
+
+    const handleWalletAction = async () => {
+        if (!amount) {
+            return toast.error("Enter amount");
+        }
+    
+        // ✅ Safe debit check using real balance
+        if (actionType === 'debit' && currentBalance < Number(amount)) {
+            return toast.error("Insufficient balance");
+        }
+    
+        setActionLoading(true);
+    
+        const payload = {
+            userId: userId,
+            amount: Number(amount),
+            note: note || `Admin ${actionType}`,
+        };
+    
+        let res;
+    
+        try {
+            res =
+                actionType === 'credit'
+                    ? await creditWallet(payload)
+                    : await debitWallet(payload);
+    
+            console.log("Wallet Response:", res); // 🔍 debug once
+        } catch (err) {
+            console.error(err);
+            toast.error("Something went wrong");
+            setActionLoading(false);
+            return;
+        }
+    
+        if (res?.ok) {
+            // ✅ NEVER undefined now
+            toast.success(res.message || `Wallet ${actionType} successful`);
+    
+            // ✅ Update balance instantly
+            if (res.data?.balance !== undefined) {
+                setCurrentBalance(res.data.balance);
+            }
+    
+            setAmount('');
+            setNote('');
+    
+            // refresh transactions
+            fetchTransactions(pagination.page, pagination.limit);
+    
+        } else {
+            toast.error(res?.message || "Operation failed");
+        }
+    
+        setActionLoading(false);
+    };
 
     // Handle page change
     const handlePageChange = (newPage) => {
@@ -270,7 +343,7 @@ const RestaurantsWallet = () => {
                 <div className="mb-8">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Restaurant Wallet</h1>
+                            <h1 className="text-3xl font-bold text-gray-900">Users Wallet</h1>
                             <p className="text-gray-600 mt-2">Transaction history and wallet management</p>
                             <div className="flex items-center gap-2 mt-1">
                                 <span className="text-sm text-gray-500">User ID:</span>
@@ -290,6 +363,82 @@ const RestaurantsWallet = () => {
                         </button>
                     </div>
 
+                </div>
+
+                {/* Wallet credit/debit */}
+                {/* Wallet Action Panel */}
+                <div className="mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+
+                        {/* LEFT */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-800">
+                                Wallet Actions
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                                Current Balance:
+                                <span className="ml-2 font-bold text-green-600">
+                                    ₹{currentBalance}
+                                </span>
+                            </p>
+                        </div>
+
+                        {/* RIGHT */}
+                        <div className="flex flex-col md:flex-row gap-3 items-center">
+
+                            {/* Toggle */}
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setActionType('credit')}
+                                    className={`px-4 py-2 rounded-lg ${actionType === 'credit'
+                                            ? 'bg-green-600 text-white'
+                                            : 'bg-gray-100'
+                                        }`}
+                                >
+                                    Credit
+                                </button>
+
+                                <button
+                                    onClick={() => setActionType('debit')}
+                                    className={`px-4 py-2 rounded-lg ${actionType === 'debit'
+                                            ? 'bg-red-600 text-white'
+                                            : 'bg-gray-100'
+                                        }`}
+                                >
+                                    Debit
+                                </button>
+                            </div>
+
+                            {/* Inputs */}
+                            <input
+                                type="number"
+                                placeholder="Amount"
+                                value={amount}
+                                onChange={(e) => setAmount(e.target.value)}
+                                className="border px-3 py-2 rounded-lg w-32"
+                            />
+
+                            <input
+                                type="text"
+                                placeholder="Note"
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
+                                className="border px-3 py-2 rounded-lg w-48"
+                            />
+
+                            {/* Submit */}
+                            <button
+                                onClick={handleWalletAction}
+                                disabled={actionLoading}
+                                className={`px-5 py-2 text-white rounded-lg ${actionType === 'credit'
+                                        ? 'bg-green-600'
+                                        : 'bg-red-600'
+                                    }`}
+                            >
+                                {actionLoading ? "Processing..." : `Apply`}
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Error Display */}

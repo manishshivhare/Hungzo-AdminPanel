@@ -714,6 +714,37 @@ export async function WalletList() {
   }
 }
 
+
+// ================= ADMIN WALLET CREDIT ==================
+export async function creditWallet(data) {
+  try {
+    const res = await API.post("/wallet/admin/credit", data);
+    return { ok: true, data: res.data };
+  } catch (error) {
+    console.error("Credit Wallet Error:", error.response?.data || error.message);
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to credit wallet",
+    };
+  }
+}
+
+// ================= ADMIN WALLET DEBIT ==================
+export async function debitWallet(data) {
+  try {
+    const res = await API.post("/wallet/admin/debit", data);
+    return { ok: true, data: res.data };
+  } catch (error) {
+    console.error("Debit Wallet Error:", error.response?.data || error.message);
+    return {
+      ok: false,
+      message:
+        error.response?.data?.message || "Failed to debit wallet",
+    };
+  }
+}
+
 // ================= USER TRANSACTIONS WITH PAGINATION ==================
 export async function getUserTransactions(userId, page = 1, limit = 20) {
   try {
