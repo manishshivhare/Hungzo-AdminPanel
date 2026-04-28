@@ -102,7 +102,7 @@ const RestaurantsWallet = () => {
             return toast.error("Enter amount");
         }
     
-        // ✅ Safe debit check using real balance
+        //  Safe debit check using real balance
         if (actionType === 'debit' && currentBalance < Number(amount)) {
             return toast.error("Insufficient balance");
         }
@@ -132,10 +132,10 @@ const RestaurantsWallet = () => {
         }
     
         if (res?.ok) {
-            // ✅ NEVER undefined now
+            //  NEVER undefined now
             toast.success(res.message || `Wallet ${actionType} successful`);
     
-            // ✅ Update balance instantly
+            //  Update balance instantly
             if (res.data?.balance !== undefined) {
                 setCurrentBalance(res.data.balance);
             }
