@@ -343,7 +343,7 @@ const RestaurantsWallet = () => {
                 <div className="mb-8">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Users Wallet</h1>
+                            <h1 className="text-3xl font-bold text-gray-900">User Wallet</h1>
                             <p className="text-gray-600 mt-2">Transaction history and wallet management</p>
                             <div className="flex items-center gap-2 mt-1">
                                 <span className="text-sm text-gray-500">User ID:</span>
