@@ -4,13 +4,13 @@ import DriversVerifi from "../Drivers/DriversPendding";
 import OnlyLoggedUser from "../Restaurant/OnlyLoggedUser";
 
 const Verifications = () => {
-  const [activeSection, setActiveSection] = useState("restaurant");
+  const [activeSection, setActiveSection] = useState("driver");
 
   return (
     <div className="min-h-screen ">
       {/* Buttons */}
       <div className="flex gap-4 m-6 ">
-        <button
+        {/* <button
           onClick={() => setActiveSection("restaurant")}
           className={`px-4 py-2 rounded font-medium ${
             activeSection === "restaurant"
@@ -19,7 +19,7 @@ const Verifications = () => {
           }`}
         >
           Restaurant Verification
-        </button>
+        </button> */}
 
         <button
           onClick={() => setActiveSection("driver")}
@@ -45,7 +45,7 @@ const Verifications = () => {
 
       {/* Sections */}
       <div className="bg-white rounded-lg p-2 shadow">
-        {activeSection === "restaurant" && <RestaurantVerifi />}
+        {/* {activeSection === "restaurant" && <RestaurantVerifi />} */}
         {activeSection === "driver" && <DriversVerifi />}
         {activeSection === "login" && <OnlyLoggedUser />}
       </div>

@@ -79,7 +79,6 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   restaurantOnlyLogged,
-  rejectRestaurantReq,
 } from "../../Api";
 import { X, XCircle, Wallet, Eye } from "lucide-react";
 import toast from "react-hot-toast";
@@ -89,7 +88,6 @@ const Restaurant = () => {
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [actionLoading, setActionLoading] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   const { user } = useAuth();
@@ -102,12 +100,12 @@ const Restaurant = () => {
 
       const data = res?.users || res?.data?.users || [];
 
-      // ✅ Only RESTAURANT role
+      //  Only RESTAURANT role
       const onlyRestaurants = data.filter(
         (user) => user.role === "RESTAURANT"
       );
 
-      // ✅ Sort latest first
+      //  Sort latest first
       const sorted = [...onlyRestaurants].sort(
         (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       );
@@ -124,20 +122,6 @@ const Restaurant = () => {
     fetchLoggedRestaurants();
   }, []);
 
-  // ================= REJECT (optional) =================
-  const handleReject = async (id) => {
-    setActionLoading(id);
-    try {
-      await rejectRestaurantReq(id);
-      toast.success("User blocked ❌");
-      setSelectedRestaurant(null);
-      fetchLoggedRestaurants();
-    } catch {
-      toast.error("Action failed");
-    } finally {
-      setActionLoading(null);
-    }
-  };
 
   // ================= SEARCH =================
   const filteredRestaurants = restaurants.filter((user) =>
