@@ -144,7 +144,7 @@ export default function AddProductPage() {
 
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-3 h-[77vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 bg-amber-100 space-y-3 h-[77vh] overflow-y-auto">
           <input
             name="name"
             value={form.name}
