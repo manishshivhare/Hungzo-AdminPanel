@@ -96,7 +96,7 @@ export default function AddProductPage() {
       formData.append("name", form.name);
       formData.append("category", form.category);
       formData.append("status", form.status);
-      formData.append("description", form.description);
+      formData.append("descriptions", form.description);
 
       // ✅ FIX: send varieties as JSON
       const validVarieties = varieties.filter(
