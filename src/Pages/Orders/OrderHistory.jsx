@@ -57,18 +57,35 @@ const formatFulfillmentType = (type) => {
 
 const deriveRefundMeta = (order) => {
   if (!order) {
-    return { refundStatus: "NOT_APPLICABLE", refundAmount: 0 };
+    return {
+      refundStatus: "NOT_APPLICABLE",
+      refundAmount: 0,
+      refundEligibleAmount: 0,
+      refundDeductionAmount: 0,
+      refundDeductionReason: "",
+    };
   }
 
   if (order.refundStatus === "APPROVED") {
     return {
       refundStatus: "APPROVED",
       refundAmount: Number(order.refundAmount || 0),
+      refundEligibleAmount: Number(
+        order.refundEligibleAmount ?? order.refundAmount ?? 0
+      ),
+      refundDeductionAmount: Number(order.refundDeductionAmount || 0),
+      refundDeductionReason: order.refundDeductionReason?.toString() || "",
     };
   }
 
   if (order.orderStatus !== "Cancelled") {
-    return { refundStatus: "NOT_APPLICABLE", refundAmount: 0 };
+    return {
+      refundStatus: "NOT_APPLICABLE",
+      refundAmount: 0,
+      refundEligibleAmount: 0,
+      refundDeductionAmount: 0,
+      refundDeductionReason: "",
+    };
   }
 
   const paidAmount =
@@ -80,6 +97,9 @@ const deriveRefundMeta = (order) => {
   return {
     refundStatus: refundAmount > 0 ? "PENDING" : "NOT_APPLICABLE",
     refundAmount,
+    refundEligibleAmount: refundAmount,
+    refundDeductionAmount: 0,
+    refundDeductionReason: "",
   };
 };
 
@@ -470,16 +490,16 @@ const OrderHistory = ({ mode = "all" }) => {
     }
   };
 
-  const handleApproveRefund = async (order) => {
+  const handleApproveRefund = async (order, payload) => {
     try {
       setRefundLoading(true);
-      const res = await approveOrderRefund(order.id);
+      const res = await approveOrderRefund(order.id, payload);
 
       if (!res?.ok) {
         throw new Error(res?.message || "Failed to approve refund");
       }
 
-      toast.success("Refund approved and credited to wallet");
+      toast.success(res.data?.message || "Refund approved and credited to wallet");
       await loadData();
     } catch (error) {
       toast.error(error.message || "Failed to approve refund");
@@ -902,11 +922,34 @@ const OrderModal = ({
   mode,
 }) => {
   const ref = useRef();
-  const { refundStatus, refundAmount } = deriveRefundMeta(order.raw);
+  const {
+    refundStatus,
+    refundAmount,
+    refundEligibleAmount,
+    refundDeductionAmount,
+    refundDeductionReason,
+  } = deriveRefundMeta(order.raw);
   const showApproveRefundButton =
     order.raw.orderStatus === "Cancelled" &&
     refundStatus === "PENDING" &&
-    refundAmount > 0;
+    refundEligibleAmount > 0;
+  const [customRefundAmount, setCustomRefundAmount] = useState(
+    refundEligibleAmount > 0 ? refundEligibleAmount.toFixed(2) : ""
+  );
+  const [deductionReasonInput, setDeductionReasonInput] = useState("");
+
+  useEffect(() => {
+    setCustomRefundAmount(
+      refundEligibleAmount > 0 ? refundEligibleAmount.toFixed(2) : ""
+    );
+    setDeductionReasonInput("");
+  }, [order.id, refundEligibleAmount]);
+
+  const parsedCustomRefundAmount = Number(customRefundAmount || 0);
+  const customAmountIsValid = Number.isFinite(parsedCustomRefundAmount);
+  const liveDeductionAmount = customAmountIsValid
+    ? Math.max(refundEligibleAmount - parsedCustomRefundAmount, 0)
+    : 0;
 
   useEffect(() => {
     const esc = (e) => e.key === "Escape" && onClose();
@@ -920,6 +963,38 @@ const OrderModal = ({
       document.removeEventListener("mousedown", outside);
     };
   }, [onClose]);
+
+  const submitCustomRefund = () => {
+    if (!customRefundAmount.trim()) {
+      toast.error("Enter the refund amount to approve.");
+      return;
+    }
+
+    if (!customAmountIsValid) {
+      toast.error("Enter a valid refund amount.");
+      return;
+    }
+
+    if (parsedCustomRefundAmount <= 0) {
+      toast.error("Refund amount must be greater than zero.");
+      return;
+    }
+
+    if (parsedCustomRefundAmount > refundEligibleAmount) {
+      toast.error("Refund amount cannot exceed the maximum refundable amount.");
+      return;
+    }
+
+    if (liveDeductionAmount > 0 && deductionReasonInput.trim().length < 3) {
+      toast.error("Add a short reason for the deduction.");
+      return;
+    }
+
+    onApproveRefund(order, {
+      refundAmount: parsedCustomRefundAmount,
+      deductionReason: liveDeductionAmount > 0 ? deductionReasonInput.trim() : "",
+    });
+  };
 
   return (
       <motion.div
@@ -988,6 +1063,24 @@ const OrderModal = ({
                   : "Not applicable"
             }
           />
+          {(refundStatus === "PENDING" || refundStatus === "APPROVED") && (
+            <DetailRow
+              label="Eligible Refund"
+              value={<span>₹{refundEligibleAmount.toFixed(2)}</span>}
+            />
+          )}
+          {refundStatus === "APPROVED" && refundDeductionAmount > 0 && (
+            <>
+              <DetailRow
+                label="Deducted Amount"
+                value={<span>₹{refundDeductionAmount.toFixed(2)}</span>}
+              />
+              <DetailRow
+                label="Deduction Reason"
+                value={refundDeductionReason || "—"}
+              />
+            </>
+          )}
 
           <div className="mt-4">
             <p className="font-semibold mb-2">Order Items:</p>
@@ -1017,8 +1110,77 @@ const OrderModal = ({
               <p className="mt-1 text-sm text-amber-800">
                 {refundStatus === "APPROVED"
                   ? `₹${refundAmount.toFixed(2)} has been credited to the user's wallet.`
-                  : `₹${refundAmount.toFixed(2)} is ready to be credited to the user's wallet after approval.`}
+                  : `Up to ₹${refundEligibleAmount.toFixed(2)} can be credited to the user's wallet after approval.`}
               </p>
+              {refundStatus === "APPROVED" && refundDeductionAmount > 0 && (
+                <p className="mt-2 text-sm text-amber-900">
+                  ₹{refundDeductionAmount.toFixed(2)} was deducted. Reason:{" "}
+                  {refundDeductionReason}
+                </p>
+              )}
+            </div>
+          )}
+
+          {showApproveRefundButton && (
+            <div className="mt-4 rounded-xl border border-amber-200 bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    Approve custom wallet refund
+                  </p>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Max refundable amount: ₹{refundEligibleAmount.toFixed(2)}
+                  </p>
+                </div>
+                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                  Cancelled order
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Refund Amount
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    max={refundEligibleAmount}
+                    value={customRefundAmount}
+                    onChange={(e) => setCustomRefundAmount(e.target.value)}
+                    disabled={refundLoading || invoiceLoading}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100 disabled:bg-gray-100"
+                    placeholder="Enter refund amount"
+                  />
+                </label>
+
+                <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Amount Deducted
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">
+                    ₹{liveDeductionAmount.toFixed(2)}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Deduction applies when approved refund is lower than the eligible refund.
+                  </p>
+                </div>
+              </div>
+
+              <label className="mt-4 block">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Reason For Amount Cut
+                </span>
+                <textarea
+                  rows={3}
+                  value={deductionReasonInput}
+                  onChange={(e) => setDeductionReasonInput(e.target.value)}
+                  disabled={refundLoading || invoiceLoading}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100 disabled:bg-gray-100"
+                  placeholder="Required when you approve less than the maximum refundable amount"
+                />
+              </label>
             </div>
           )}
         </div>
@@ -1026,7 +1188,7 @@ const OrderModal = ({
         <div className="mt-6 flex flex-col-reverse gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:justify-end">
           {showApproveRefundButton && (
             <button
-              onClick={() => onApproveRefund(order)}
+              onClick={submitCustomRefund}
               disabled={refundLoading || invoiceLoading}
               className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >

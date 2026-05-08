@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // const API_BASE = "https://api.hungzo.in";
-// const API_BASE = "http://10.248.31.138:4000";
+// const API_BASE = "http://192.168.0.196:4000";
 const API_BASE = "https://hungzo-backend.onrender.com";
 
 
@@ -783,9 +783,9 @@ export async function updateOrderStatus(orderId, status) {
   }
 }
 
-export async function approveOrderRefund(orderId) {
+export async function approveOrderRefund(orderId, payload = {}) {
   try {
-    const res = await API.post(`/orders/${orderId}/refund/approve`);
+    const res = await API.post(`/orders/${orderId}/refund/approve`, payload);
     return { ok: true, data: res.data };
   } catch (error) {
     return {
