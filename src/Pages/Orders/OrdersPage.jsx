@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import LiveOrder from "./LiveOrder";
 import OrderHistory from "./OrderHistory";
 import { useAuth } from "../../Context/AuthProvider";
-import OrderReturn from "./OrderReturn";
 
 /* 🔔 Sound */
 const playNewOrderSound = () => {
@@ -46,11 +45,10 @@ const OrdersPage = () => {
               label="Order History"
             />
             
-            {/* FIXED: Changed from "Return" to "return" to match state */}
             <TabButton
-              active={activeTab === "return"}
-              onClick={() => setActiveTab("return")}
-              label="Order Return"
+              active={activeTab === "cancelled"}
+              onClick={() => setActiveTab("cancelled")}
+              label="Order Cancelled"
             />
           </div>
         </div>
@@ -80,7 +78,7 @@ const OrdersPage = () => {
         )}
 
         {activeTab === "history" && <OrderHistory />}
-        {activeTab === "return" && <OrderReturn />}
+        {activeTab === "cancelled" && <OrderHistory mode="cancelled" />}
       </div>
     </>
   );

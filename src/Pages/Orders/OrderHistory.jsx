@@ -200,6 +200,11 @@ const STATUS_OPTIONS = [
   { value: 'processing', label: 'Processing', icon: '⚙️' },
 ];
 
+const CANCELLED_STATUS_OPTIONS = [
+  { value: 'cancelled', label: 'Cancelled', icon: '❌' },
+  { value: 'refunded', label: 'Refunded', icon: '🔄' },
+];
+
 const PAYMENT_OPTIONS = [
   { value: 'COD', label: 'Cash on Delivery', icon: '💵' },
   { value: 'ONLINE', label: 'Online Payment', icon: '💳' },
@@ -208,7 +213,7 @@ const PAYMENT_OPTIONS = [
 ];
 
 /* ================= MAIN ================= */
-const OrderHistory = () => {
+const OrderHistory = ({ mode = "all" }) => {
   const { user } = useAuth();
 
   const [orders, setOrders] = useState([]);
@@ -226,22 +231,6 @@ const OrderHistory = () => {
 
   // Ref for table container
   const tableContainerRef = useRef(null);
-
-  // Get unique values for filters
-  const uniqueEmails = useMemo(() => {
-    const emails = orders.map(o => o.email).filter(email => email && email !== "—");
-    return [...new Set(emails)];
-  }, [orders]);
-
-  const uniquePhones = useMemo(() => {
-    const phones = orders.map(o => o.phone).filter(phone => phone && phone !== "—");
-    return [...new Set(phones)];
-  }, [orders]);
-
-  const uniqueDates = useMemo(() => {
-    const dates = orders.map(o => o.date);
-    return [...new Set(dates)].sort().reverse();
-  }, [orders]);
 
   // Function to scroll table to top
   const scrollTableToTop = () => {
@@ -324,9 +313,35 @@ const OrderHistory = () => {
     loadData();
   }, [loadData]);
 
+  const baseOrders = useMemo(() => {
+    if (mode !== "cancelled") {
+      return orders;
+    }
+
+    return orders.filter((order) =>
+      order.raw?.orderStatus === "Cancelled" || order.status === "Refunded"
+    );
+  }, [mode, orders]);
+
+  // Get unique values for filters
+  const uniqueEmails = useMemo(() => {
+    const emails = baseOrders.map(o => o.email).filter(email => email && email !== "—");
+    return [...new Set(emails)];
+  }, [baseOrders]);
+
+  const uniquePhones = useMemo(() => {
+    const phones = baseOrders.map(o => o.phone).filter(phone => phone && phone !== "—");
+    return [...new Set(phones)];
+  }, [baseOrders]);
+
+  const uniqueDates = useMemo(() => {
+    const dates = baseOrders.map(o => o.date);
+    return [...new Set(dates)].sort().reverse();
+  }, [baseOrders]);
+
   /* ================= FILTER LOGIC ================= */
   const filteredOrders = useMemo(() => {
-    return orders.filter((o) => {
+    return baseOrders.filter((o) => {
       // No category selected - show all
       if (!selectedCategory) return true;
 
@@ -367,7 +382,7 @@ const OrderHistory = () => {
           return true;
       }
     });
-  }, [orders, selectedCategory, filterValue, dateRange, amountRange]);
+  }, [baseOrders, selectedCategory, filterValue, dateRange, amountRange]);
 
   // Scroll to top whenever filters change
   useEffect(() => {
@@ -385,19 +400,26 @@ const OrderHistory = () => {
 
   /* ================= ANALYTICS ================= */
   const analytics = useMemo(() => {
-    const completed = orders.filter((o) => o.status === "Completed");
-    const revenue = completed.reduce((sum, o) => sum + o.totalValue, 0);
+    const completed = baseOrders.filter((o) => o.status === "Completed");
+    const revenue =
+      mode === "cancelled"
+        ? baseOrders.reduce((sum, o) => sum + o.totalValue, 0)
+        : completed.reduce((sum, o) => sum + o.totalValue, 0);
     const filteredRevenue = filteredOrders.reduce((sum, o) => sum + o.totalValue, 0);
+    const cancelled = baseOrders.filter((o) => o.raw?.orderStatus === "Cancelled");
+    const refunded = baseOrders.filter((o) => o.status === "Refunded");
 
     return {
-      total: orders.length,
+      total: baseOrders.length,
       completed: completed.length,
+      cancelled: cancelled.length,
+      refunded: refunded.length,
       revenue,
       filteredTotal: filteredOrders.length,
       filteredRevenue,
-      rate: orders.length ? ((completed.length / orders.length) * 100).toFixed(1) : 0,
+      rate: baseOrders.length ? ((completed.length / baseOrders.length) * 100).toFixed(1) : 0,
     };
-  }, [orders, filteredOrders]);
+  }, [baseOrders, filteredOrders, mode]);
 
   /* ================= EXPORT FUNCTION ================= */
   const handleExport = async () => {
@@ -412,7 +434,9 @@ const OrderHistory = () => {
       // Prepare filename
       const date = new Date().toISOString().split('T')[0];
       const filterStatus = selectedCategory ? 'filtered' : 'all';
-      const filename = `orders_${filterStatus}_${date}.xlsx`;
+      const filename = `${
+        mode === "cancelled" ? "cancelled_orders" : "orders"
+      }_${filterStatus}_${date}.xlsx`;
 
       // Export to Excel
       const success = exportToExcel(filteredOrders, filename);
@@ -479,7 +503,7 @@ const OrderHistory = () => {
       case 'phone':
         return uniquePhones.map(phone => ({ value: phone, label: phone }));
       case 'status':
-        return STATUS_OPTIONS;
+        return mode === "cancelled" ? CANCELLED_STATUS_OPTIONS : STATUS_OPTIONS;
       case 'payment':
         return PAYMENT_OPTIONS;
       case 'date':
@@ -581,7 +605,16 @@ const OrderHistory = () => {
       {/* ================= HEADER ================= */}
       <div className="bg-white rounded-lg shadow-sm p-4 mb-2">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-1">
-          <h2 className="text-2xl font-bold">📊 Order History</h2>
+          <div>
+            <h2 className="text-2xl font-bold">
+              {mode === "cancelled" ? "❌ Order Cancelled" : "📊 Order History"}
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              {mode === "cancelled"
+                ? "Review cancelled orders and approve wallet refunds where applicable."
+                : "Browse completed, cancelled, refunded, and in-progress orders."}
+            </p>
+          </div>
 
           <div className="flex gap-2">
             {selectedCategory && (
@@ -609,7 +642,7 @@ const OrderHistory = () => {
                 </>
               ) : (
                 <>
-                  📊 Export to Excel ({filteredOrders.length}/{orders.length})
+                  📊 Export to Excel ({filteredOrders.length}/{baseOrders.length})
                 </>
               )}
             </button>
@@ -688,7 +721,7 @@ const OrderHistory = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mt-1">
           {/* Always show these stats */}
           <Stat
-            label="Total Orders"
+            label={mode === "cancelled" ? "Cancelled Orders" : "Total Orders"}
             value={analytics.total}
           />
 
@@ -697,30 +730,45 @@ const OrderHistory = () => {
             <Stat
               label="Filtered"
               value={analytics.filteredTotal}
-              subtitle={`${((analytics.filteredTotal / analytics.total) * 100).toFixed(1)}%`}
+              subtitle={`${analytics.total > 0 ? ((analytics.filteredTotal / analytics.total) * 100).toFixed(1) : "0.0"}%`}
               blue
             />
           )}
 
-          <Stat
-            label="Completed"
-            value={analytics.completed}
-            green
-          />
+          {mode === "cancelled" ? (
+            <>
+              <Stat
+                label="Refunded"
+                value={analytics.refunded}
+                green
+              />
+              <Stat
+                label="Pending Refund"
+                value={Math.max(analytics.cancelled - analytics.refunded, 0)}
+                blue
+              />
+            </>
+          ) : (
+            <Stat
+              label="Completed"
+              value={analytics.completed}
+              green
+            />
+          )}
 
           {/* Conditional Revenue Stats - Exactly as you requested */}
           {selectedCategory ? (
             // When filter is active - show only Filtered Revenue
             <Stat
-              label="Filtered Revenue"
+              label={mode === "cancelled" ? "Filtered Value" : "Filtered Revenue"}
               value={`₹${analytics.filteredRevenue.toFixed(2)}`}
-              subtitle={`${((analytics.filteredRevenue / analytics.revenue) * 100).toFixed(1)}%`}
+              subtitle={`${analytics.revenue > 0 ? ((analytics.filteredRevenue / analytics.revenue) * 100).toFixed(1) : "0.0"}%`}
               blue
             />
           ) : (
             // When no filter - show only Total Revenue
             <Stat
-              label="Total Revenue"
+              label={mode === "cancelled" ? "Total Cancelled Value" : "Total Revenue"}
               value={`₹${analytics.revenue.toFixed(2)}`}
             />
           )}
@@ -805,8 +853,14 @@ const OrderHistory = () => {
         {filteredOrders.length === 0 && (
           <div className="text-center py-16">
             <div className="text-5xl mb-4">📭</div>
-            <p className="text-gray-500 text-lg">No orders found</p>
-            <p className="text-gray-400 text-sm mt-2">Try adjusting your filters</p>
+            <p className="text-gray-500 text-lg">
+              {mode === "cancelled" ? "No cancelled orders found" : "No orders found"}
+            </p>
+            <p className="text-gray-400 text-sm mt-2">
+              {mode === "cancelled"
+                ? "Cancelled and refunded orders will appear here."
+                : "Try adjusting your filters"}
+            </p>
             {selectedCategory && (
               <button
                 onClick={clearFilters}
@@ -829,6 +883,7 @@ const OrderHistory = () => {
             onApproveRefund={handleApproveRefund}
             invoiceLoading={invoiceLoading}
             refundLoading={refundLoading}
+            mode={mode}
           />
         )}
       </AnimatePresence>
@@ -844,6 +899,7 @@ const OrderModal = ({
   onApproveRefund,
   invoiceLoading,
   refundLoading,
+  mode,
 }) => {
   const ref = useRef();
   const { refundStatus, refundAmount } = deriveRefundMeta(order.raw);
@@ -887,7 +943,9 @@ const OrderModal = ({
           ✕
         </button>
 
-        <h3 className="text-lg font-bold mb-4">🧾 Order Details</h3>
+        <h3 className="text-lg font-bold mb-4">
+          {mode === "cancelled" ? "❌ Cancelled Order Details" : "🧾 Order Details"}
+        </h3>
 
         <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1 text-sm">
           <DetailRow label="Order ID" value={order.id} />

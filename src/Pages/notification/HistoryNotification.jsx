@@ -1,263 +1,335 @@
-// HistoryNotification.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { format } from 'date-fns';
+import {
+  Activity,
+  BellRing,
+  CheckCircle2,
+  CircleOff,
+  Eye,
+  Filter,
+  Search,
+  Smartphone,
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+import { getNotificationCampaigns } from '../../Api';
 
-const HistoryNotification = () => {
+const statusOptions = [
+  { value: 'all', label: 'All status' },
+  { value: 'SENT', label: 'Sent' },
+  { value: 'PARTIAL', label: 'Partial' },
+  { value: 'FAILED', label: 'Failed' },
+  { value: 'PROCESSING', label: 'Processing' },
+];
+
+const statusConfig = {
+  SENT: {
+    label: 'Sent',
+    badge: 'bg-emerald-100 text-emerald-800',
+    dot: 'bg-emerald-500',
+  },
+  PARTIAL: {
+    label: 'Partial',
+    badge: 'bg-amber-100 text-amber-800',
+    dot: 'bg-amber-500',
+  },
+  PROCESSING: {
+    label: 'Processing',
+    badge: 'bg-sky-100 text-sky-800',
+    dot: 'bg-sky-500',
+  },
+  FAILED: {
+    label: 'Failed',
+    badge: 'bg-rose-100 text-rose-800',
+    dot: 'bg-rose-500',
+  },
+};
+
+const HistoryNotification = ({ refreshKey = 0 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [dateRange, setDateRange] = useState('all');
+  const [campaigns, setCampaigns] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data for demonstration
-  const notifications = [
-    {
-      id: 1,
-      title: 'New Feature Update',
-      message: 'Check out our new feature that makes shopping easier!',
-      sentTo: 'All Users',
-      sentAt: '2024-01-15 10:30 AM',
-      status: 'delivered',
-      delivered: 12450,
-      opened: 8765,
-      failed: 23
-    },
-    {
-      id: 2,
-      title: 'Flash Sale Alert',
-      message: '50% off on all items. Limited time offer!',
-      sentTo: 'Active Users',
-      sentAt: '2024-01-14 03:15 PM',
-      status: 'delivered',
-      delivered: 8760,
-      opened: 6543,
-      failed: 12
-    },
-    {
-      id: 3,
-      title: 'Welcome Bonus',
-      message: 'Get ₹100 welcome bonus on your first order',
-      sentTo: 'New Users',
-      sentAt: '2024-01-13 09:00 AM',
-      status: 'delivered',
-      delivered: 2340,
-      opened: 1876,
-      failed: 5
-    },
-    {
-      id: 4,
-      title: 'Payment Reminder',
-      message: 'Your subscription payment is due tomorrow',
-      sentTo: 'Selected Users',
-      sentAt: '2024-01-12 11:45 AM',
-      status: 'pending',
-      delivered: 0,
-      opened: 0,
-      failed: 0
-    },
-    {
-      id: 5,
-      title: 'Holiday Greetings',
-      message: 'Wishing you and your family a happy holiday season!',
-      sentTo: 'All Users',
-      sentAt: '2024-01-11 08:00 AM',
-      status: 'failed',
-      delivered: 0,
-      opened: 0,
-      failed: 156
-    }
-  ];
+  useEffect(() => {
+    let isMounted = true;
 
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      delivered: { bg: 'bg-green-100', text: 'text-green-800', label: 'Delivered' },
-      pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
-      failed: { bg: 'bg-red-100', text: 'text-red-800', label: 'Failed' }
+    const loadCampaigns = async () => {
+      setIsLoading(true);
+      const result = await getNotificationCampaigns(50);
+      if (!isMounted) {
+        return;
+      }
+
+      if (!result.ok) {
+        toast.error(result.message);
+        setIsLoading(false);
+        return;
+      }
+
+      setCampaigns(result.data.campaigns || []);
+      setSummary(result.data.summary || null);
+      setIsLoading(false);
     };
 
-    const config = statusConfig[status] || statusConfig.pending;
+    loadCampaigns();
+    return () => {
+      isMounted = false;
+    };
+  }, [refreshKey]);
 
-    return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${config.bg} ${config.text}`}>
-        {config.label}
-      </span>
-    );
-  };
+  const filteredCampaigns = useMemo(
+    () =>
+      campaigns.filter((campaign) => {
+        const title = campaign.title?.toLowerCase() || '';
+        const body = campaign.body?.toLowerCase() || '';
+        const query = searchTerm.toLowerCase();
+        const matchesSearch = title.includes(query) || body.includes(query);
+        const matchesStatus = filterStatus === 'all' || campaign.status === filterStatus;
+        return matchesSearch && matchesStatus;
+      }),
+    [campaigns, filterStatus, searchTerm]
+  );
 
-  const filteredNotifications = notifications.filter(notification => {
-    const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         notification.message.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || notification.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  const cards = [
+    {
+      label: 'Total campaigns',
+      value: summary?.totalCampaigns || 0,
+      helper: 'Tracked promotional sends',
+      icon: BellRing,
+      tone: 'bg-slate-900 text-white',
+    },
+    {
+      label: 'Delivery rate',
+      value: `${summary?.deliveryRate || 0}%`,
+      helper: `${summary?.deliveredCount || 0} delivered`,
+      icon: CheckCircle2,
+      tone: 'bg-emerald-50 text-emerald-900',
+    },
+    {
+      label: 'Open rate',
+      value: `${summary?.openRate || 0}%`,
+      helper: `${summary?.openedCount || 0} opened in app`,
+      icon: Eye,
+      tone: 'bg-sky-50 text-sky-900',
+    },
+    {
+      label: 'Failures',
+      value: summary?.failedCount || 0,
+      helper: 'Across recent campaigns',
+      icon: CircleOff,
+      tone: 'bg-rose-50 text-rose-900',
+    },
+  ];
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header with Filters */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <h2 className="text-lg font-semibold text-gray-800">Notification History</h2>
-          
-          {/* Search and Filters */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Search */}
-            <div className="relative">
+    <div className="flex h-full flex-col">
+      <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-white">
+              <Activity className="h-3.5 w-3.5" />
+              Insights
+            </div>
+            <h2 className="mt-2.5 text-xl font-semibold text-slate-900">Campaign performance</h2>
+            <p className="mt-1.5 max-w-2xl text-sm leading-5 text-slate-500">
+              Review the last 50 notification campaigns, inspect delivery quality, and spot
+              campaigns that may need follow-up.
+            </p>
+          </div>
+
+          <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr),200px]">
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search notifications..."
+                placeholder="Search title or message"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full sm:w-64 pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="w-full rounded-[1rem] border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-800 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
               />
-              <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
-            </div>
+            </label>
 
-            {/* Status Filter */}
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-            >
-              <option value="all">All Status</option>
-              <option value="delivered">Delivered</option>
-              <option value="pending">Pending</option>
-              <option value="failed">Failed</option>
-            </select>
-
-            {/* Date Range Filter */}
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-            >
-              <option value="all">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="custom">Custom Range</option>
-            </select>
-
-            {/* Export Button */}
-            <button className="px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 text-sm flex items-center gap-2">
-              <span>📥</span> Export
-            </button>
+            <label className="relative block">
+              <Filter className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full appearance-none rounded-[1rem] border border-slate-200 bg-white py-2.5 pl-11 pr-4 text-sm text-slate-800 outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+              >
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-3">
-            <div className="text-sm text-gray-600">Total Notifications</div>
-            <div className="text-2xl font-bold text-gray-900">156</div>
-            <div className="text-xs text-gray-500 mt-1">Last 30 days</div>
-          </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-3">
-            <div className="text-sm text-gray-600">Delivery Rate</div>
-            <div className="text-2xl font-bold text-green-600">98.5%</div>
-            <div className="text-xs text-gray-500 mt-1">+2.3% from last month</div>
-          </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-3">
-            <div className="text-sm text-gray-600">Open Rate</div>
-            <div className="text-2xl font-bold text-blue-600">72.3%</div>
-            <div className="text-xs text-gray-500 mt-1">+5.1% from last month</div>
-          </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {cards.map((card) => {
+            const Icon = card.icon;
+
+            return (
+              <div key={card.label} className={`rounded-[1.15rem] p-3.5 shadow-sm ${card.tone}`}>
+                <div className="flex items-start justify-between">
+                  <div className="text-xs font-medium opacity-80">{card.label}</div>
+                  <Icon className="h-4.5 w-4.5 opacity-75" />
+                </div>
+                <div className="mt-3 text-2xl font-semibold">{card.value}</div>
+                <div className="mt-1.5 text-xs opacity-75">{card.helper}</div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Notifications List */}
-      <div className="flex-1 overflow-y-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 sticky top-0">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Notification
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Sent To
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Sent At
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Stats
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredNotifications.map((notification) => (
-              <tr key={notification.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3">
-                  <div>
-                    <div className="font-medium text-gray-900">{notification.title}</div>
-                    <div className="text-sm text-gray-500 truncate max-w-xs">{notification.message}</div>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  {notification.sentTo}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  {notification.sentAt}
-                </td>
-                <td className="px-4 py-3">
-                  {getStatusBadge(notification.status)}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-col text-xs">
-                    <span className="text-green-600">✓ {notification.delivered.toLocaleString()}</span>
-                    <span className="text-blue-600">👁 {notification.opened.toLocaleString()}</span>
-                    <span className="text-red-600">✗ {notification.failed.toLocaleString()}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-right space-x-2">
-                  <button className="text-blue-600 hover:text-blue-800 text-sm">
-                    View
-                  </button>
-                  <button className="text-gray-600 hover:text-gray-800 text-sm">
-                    Resend
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex-1 overflow-y-auto bg-white px-5 py-5">
+        {isLoading ? (
+          <div className="flex min-h-[240px] items-center justify-center rounded-[1.35rem] border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
+            Loading campaigns...
+          </div>
+        ) : filteredCampaigns.length === 0 ? (
+          <div className="flex min-h-[260px] flex-col items-center justify-center rounded-[1.35rem] border border-dashed border-slate-200 bg-slate-50 px-6 text-center">
+            <div className="rounded-full bg-white p-3 shadow-sm">
+              <BellRing className="h-7 w-7 text-slate-400" />
+            </div>
+            <h3 className="mt-4 text-base font-semibold text-slate-900">No campaigns found</h3>
+            <p className="mt-2 max-w-md text-sm leading-5 text-slate-500">
+              Try a different search term or clear the status filter to see more campaign history.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredCampaigns.map((campaign) => {
+              const status = statusConfig[campaign.status] || statusConfig.PROCESSING;
 
-        {filteredNotifications.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-3">📭</div>
-            <p className="text-gray-500">No notifications found</p>
+              return (
+                <article
+                  key={campaign.id}
+                  className="rounded-[1.35rem] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300"
+                >
+                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${status.badge}`}>
+                          {status.label}
+                        </span>
+                        <span className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">
+                          {campaign.audience?.label || campaign.audience?.type || 'Audience'}
+                        </span>
+                      </div>
+
+                      <h3 className="mt-3 text-lg font-semibold text-slate-900">{campaign.title}</h3>
+                      <p className="mt-2 max-w-3xl text-sm leading-5 text-slate-500">{campaign.body}</p>
+
+                      <div className="mt-3 flex flex-wrap gap-2.5 text-xs text-slate-500">
+                        <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5">
+                          <Smartphone className="h-3.5 w-3.5" />
+                          {campaign.metrics?.targetedDevices?.toLocaleString?.() || 0} active devices
+                        </div>
+                        <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5">
+                          <Users className="h-3.5 w-3.5" />
+                          {campaign.metrics?.targetedUsers?.toLocaleString?.() || 0} targeted users
+                        </div>
+                        <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5">
+                          <span className={`h-2 w-2 rounded-full ${status.dot}`} />
+                          {campaign.sentAt
+                            ? format(new Date(campaign.sentAt), 'dd MMM yyyy, hh:mm a')
+                            : 'Not sent yet'}
+                        </div>
+                      </div>
+
+                      {campaign.action?.type === 'OPEN_URL' && campaign.action?.url ? (
+                        <a
+                          href={campaign.action.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-cyan-700 hover:text-cyan-800"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          {campaign.action.url}
+                        </a>
+                      ) : null}
+                    </div>
+
+                    <div className="grid gap-2.5 sm:grid-cols-3 xl:w-[320px] xl:grid-cols-1">
+                      <div className="rounded-[1rem] bg-emerald-50 p-3.5">
+                        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                          Delivered
+                        </div>
+                        <div className="mt-1.5 text-xl font-semibold text-emerald-900">
+                          {campaign.metrics?.deliveredCount?.toLocaleString?.() || 0}
+                        </div>
+                      </div>
+                      <div className="rounded-[1rem] bg-sky-50 p-3.5">
+                        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
+                          Opened
+                        </div>
+                        <div className="mt-1.5 text-xl font-semibold text-sky-900">
+                          {campaign.metrics?.openedCount?.toLocaleString?.() || 0}
+                        </div>
+                      </div>
+                      <div className="rounded-[1rem] bg-rose-50 p-3.5">
+                        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">
+                          Failed
+                        </div>
+                        <div className="mt-1.5 text-xl font-semibold text-rose-900">
+                          {campaign.metrics?.failedCount?.toLocaleString?.() || 0}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {campaign.failureSummary?.length ? (
+                    <div className="mt-4 rounded-[1rem] border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900">
+                      Failure summary: {campaign.failureSummary.map((item) => `${item.code} (${item.count})`).join(', ')}
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
           </div>
         )}
-      </div>
-
-      {/* Pagination */}
-      <div className="border-t border-gray-200 px-4 py-3 bg-white flex items-center justify-between">
-        <div className="text-sm text-gray-700">
-          Showing <span className="font-medium">1</span> to <span className="font-medium">5</span> of{' '}
-          <span className="font-medium">20</span> results
-        </div>
-        <div className="flex space-x-2">
-          <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50">
-            Previous
-          </button>
-          <button className="px-3 py-1 border border-blue-500 rounded-md text-sm text-white bg-blue-600">
-            1
-          </button>
-          <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50">
-            2
-          </button>
-          <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50">
-            3
-          </button>
-          <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-50">
-            Next
-          </button>
-        </div>
       </div>
     </div>
   );
 };
+
+const Users = ({ className }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
+const ExternalLink = ({ className }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    <path d="M15 3h6v6" />
+    <path d="M10 14 21 3" />
+  </svg>
+);
 
 export default HistoryNotification;

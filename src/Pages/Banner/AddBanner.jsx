@@ -1,343 +1,441 @@
-import React, { useEffect, useState } from "react";
-import { fetchCategories, myProducts, createBanner } from "../../Api";
+import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
-const AddBanner = ({ onBack, onBannerCreated }) => {
-  const [formData, setFormData] = useState({
-    title: "",
-    actionType: "CATEGORY",
-    actionId: "",
-    targetUrl: "",
-    description: "",
-  });
+import { createBanner, fetchCategories, myProducts } from "../../Api";
 
+const createInitialForm = () => ({
+  title: "",
+  subtitle: "",
+  description: "",
+  actionType: "CATEGORY",
+  actionId: "",
+  targetUrl: "",
+  displayOrder: "0",
+  startsAt: "",
+  endsAt: "",
+  isActive: true,
+});
+
+const inputClass =
+  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
+
+const AddBanner = ({ onBack, onBannerCreated }) => {
+  const [form, setForm] = useState(createInitialForm);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
-  const [type, setType] = useState("CATEGORY");
-  const [loading, setLoading] = useState(true);
-  const [selectedImageFiles, setSelectedImageFiles] = useState([]);
+  const [selectedImages, setSelectedImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    loadCategories();
-    loadProducts();
+    loadReferenceData();
+    return () => {
+      imagePreviews.forEach((preview) => URL.revokeObjectURL(preview));
+    };
   }, []);
 
-  const loadCategories = async () => {
-    try {
-      const res = await fetchCategories();
-      if (res?.ok) {
-        const active = (res.categories || []).filter((c) => c.isActive);
-        setCategories(active);
+  const actionOptions = useMemo(
+    () => [
+      { value: "CATEGORY", label: "Open category" },
+      { value: "PRODUCT", label: "Open product" },
+      { value: "URL", label: "Open web URL" },
+      { value: "NONE", label: "No action" },
+    ],
+    []
+  );
 
-        if (active.length > 0) {
-          setFormData((prev) => ({
-            ...prev,
-            actionId: active[0]._id,
-          }));
-        }
+  const actionTargets = useMemo(() => {
+    if (form.actionType === "CATEGORY") return categories;
+    if (form.actionType === "PRODUCT") return products;
+    return [];
+  }, [categories, form.actionType, products]);
+
+  const loadReferenceData = async () => {
+    try {
+      setLoading(true);
+      const [categoriesRes, productsRes] = await Promise.all([
+        fetchCategories(),
+        myProducts(),
+      ]);
+
+      if (categoriesRes?.ok) {
+        setCategories(categoriesRes.categories || []);
       }
-    } catch (err) {
-      toast.error("Failed to load categories");
+
+      if (productsRes?.ok) {
+        const nextProducts = Array.isArray(productsRes.data?.products)
+          ? productsRes.data.products
+          : [];
+        setProducts(nextProducts);
+      }
+    } catch (_error) {
+      toast.error("Failed to load banner references");
     } finally {
       setLoading(false);
     }
   };
 
-  const loadProducts = async () => {
-    try {
-      const res = await myProducts();
-      if (res?.ok) {
-        setProducts(res.data?.products || []);
-      }
-    } catch {
-      toast.error("Failed to load products");
-    }
-  };
-
-  /* =========================
-     IMAGE HANDLING
-  ========================= */
-
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-
-    if (selectedImageFiles.length + files.length > 5) {
-      toast.error("Maximum 5 images allowed");
+  useEffect(() => {
+    if (form.actionType === "CATEGORY") {
+      setForm((prev) => ({
+        ...prev,
+        actionId: prev.actionId || categories[0]?._id || "",
+        targetUrl: "",
+      }));
       return;
     }
 
-    const valid = [];
+    if (form.actionType === "PRODUCT") {
+      setForm((prev) => ({
+        ...prev,
+        actionId: prev.actionId || products[0]?._id || "",
+        targetUrl: "",
+      }));
+      return;
+    }
 
-    files.forEach((file) => {
-      if (!file.type.match("image.*")) return;
-      if (file.size > 5 * 1024 * 1024) return;
-      valid.push(file);
-    });
+    if (form.actionType === "URL") {
+      setForm((prev) => ({
+        ...prev,
+        actionId: "",
+      }));
+      return;
+    }
 
-    setSelectedImageFiles((prev) => [...prev, ...valid]);
-    const previews = valid.map((file) => URL.createObjectURL(file));
-    setImagePreviews((prev) => [...prev, ...previews]);
+    setForm((prev) => ({
+      ...prev,
+      actionId: "",
+      targetUrl: "",
+    }));
+  }, [categories, form.actionType, products]);
 
-    e.target.value = "";
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleImageChange = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    const validFiles = files.filter(
+      (file) => file.type.startsWith("image/") && file.size <= 5 * 1024 * 1024
+    );
+
+    if (validFiles.length !== files.length) {
+      toast.error("Only image files up to 5MB are allowed");
+    }
+
+    const nextFiles = [...selectedImages, ...validFiles].slice(0, 5);
+    const nextPreviews = nextFiles.map((file) => URL.createObjectURL(file));
+
+    imagePreviews.forEach((preview) => URL.revokeObjectURL(preview));
+    setSelectedImages(nextFiles);
+    setImagePreviews(nextPreviews);
+    event.target.value = "";
   };
 
   const removeImage = (index) => {
-    URL.revokeObjectURL(imagePreviews[index]);
-
-    setSelectedImageFiles((prev) => prev.filter((_, i) => i !== index));
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    const nextFiles = selectedImages.filter((_, fileIndex) => fileIndex != index);
+    const nextPreviews = imagePreviews.filter((_, previewIndex) => previewIndex != index);
+    if (imagePreviews[index]) {
+      URL.revokeObjectURL(imagePreviews[index]);
+    }
+    setSelectedImages(nextFiles);
+    setImagePreviews(nextPreviews);
   };
 
-  /* =========================
-     TYPE CHANGE
-  ========================= */
-
-  const handleTypeChange = (e) => {
-    const newType = e.target.value;
-    setType(newType);
-
-    if (newType === "CATEGORY") {
-      setFormData((prev) => ({
-        ...prev,
-        actionType: "CATEGORY",
-        actionId: categories.length ? categories[0]._id : "",
-      }));
+  const validateForm = () => {
+    if (!form.title.trim()) return "Banner title is required";
+    if (selectedImages.length === 0) return "Select at least one banner image";
+    if (form.actionType === "CATEGORY" && !form.actionId) {
+      return "Select a category";
     }
-
-    if (newType === "PRODUCT") {
-      setFormData((prev) => ({
-        ...prev,
-        actionType: "PRODUCT",
-        actionId: products.length ? products[0]._id : "",
-      }));
+    if (form.actionType === "PRODUCT" && !form.actionId) {
+      return "Select a product";
     }
-
-    if (newType === "NONE") {
-      setFormData((prev) => ({
-        ...prev,
-        actionType: "NONE",
-        actionId: "",
-      }));
+    if (form.actionType === "URL" && !/^https?:\/\//i.test(form.targetUrl.trim())) {
+      return "Target URL must start with http:// or https://";
     }
+    if (form.startsAt && form.endsAt && form.startsAt > form.endsAt) {
+      return "Start time cannot be after end time";
+    }
+    return null;
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
-  /* =========================
-     SUBMIT
-  ========================= */
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!formData.title.trim()) {
-      toast.error("Banner title required");
-      return;
-    }
-
-    if (selectedImageFiles.length === 0) {
-      toast.error("Select at least one image");
-      return;
-    }
-
-    if (type === "CATEGORY" && !formData.actionId) {
-      toast.error("Select a category");
-      return;
-    }
-
-    if (type === "PRODUCT" && !formData.actionId) {
-      toast.error("Select a product");
+    const validationMessage = validateForm();
+    if (validationMessage) {
+      toast.error(validationMessage);
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const formDataToSend = new FormData();
+      const formData = new FormData();
+      formData.append("title", form.title.trim());
+      formData.append("subtitle", form.subtitle.trim());
+      formData.append("description", form.description.trim());
+      formData.append("actionType", form.actionType);
+      formData.append("displayOrder", form.displayOrder || "0");
+      formData.append("isActive", String(form.isActive));
 
-      formDataToSend.append("title", formData.title.trim());
-      formDataToSend.append("actionType", type);
-
-      if (type === "CATEGORY" || type === "PRODUCT") {
-        formDataToSend.append("actionId", formData.actionId);
+      if (form.startsAt) {
+        formData.append("startsAt", new Date(form.startsAt).toISOString());
+      }
+      if (form.endsAt) {
+        formData.append("endsAt", new Date(form.endsAt).toISOString());
       }
 
-      selectedImageFiles.forEach((file) => {
-        formDataToSend.append("images", file);
+      if (form.actionType === "CATEGORY" || form.actionType === "PRODUCT") {
+        formData.append("actionId", form.actionId);
+      }
+
+      if (form.actionType === "URL") {
+        formData.append("targetUrl", form.targetUrl.trim());
+      }
+
+      selectedImages.forEach((file) => {
+        formData.append("images", file);
       });
 
-      if (formData.targetUrl.trim()) {
-        formDataToSend.append("targetUrl", formData.targetUrl.trim());
+      const response = await createBanner(formData);
+
+      if (!response?.ok) {
+        throw new Error(response?.message || "Failed to create banner");
       }
 
-      if (formData.description.trim()) {
-        formDataToSend.append("description", formData.description.trim());
+      toast.success("Banner created successfully");
+      if (onBannerCreated) {
+        onBannerCreated(response.data?.banner);
       }
-
-      const response = await createBanner(formDataToSend);
-
-      if (response.ok) {
-        toast.success("Banner created");
-
-        imagePreviews.forEach((p) => URL.revokeObjectURL(p));
-
-        setSelectedImageFiles([]);
-        setImagePreviews([]);
-
-        if (onBannerCreated) onBannerCreated(response.data?.banner);
-        if (onBack) onBack();
-      } else {
-        toast.error(response.message || "Failed to create banner");
+      if (onBack) {
+        onBack();
       }
-    } catch (err) {
-      console.error(err);
-      toast.error("Server error");
+    } catch (error) {
+      toast.error(error.message || "Failed to create banner");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  /* =========================
-     RENDER SELECT
-  ========================= */
-
-  const renderActionSelect = () => {
-    if (type === "CATEGORY") {
+  const renderActionField = () => {
+    if (form.actionType === "URL") {
       return (
-        <select
-          name="actionId"
-          value={formData.actionId}
-          onChange={handleChange}
-          className="w-full border px-3 py-2 rounded"
-        >
-          <option value="">Select category</option>
-          {categories.map((c) => (
-            <option key={c._id} value={c._id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      );
-    }
-
-    if (type === "PRODUCT") {
-      return (
-        <select
-          name="actionId"
-          value={formData.actionId}
-          onChange={handleChange}
-          className="w-full border px-3 py-2 rounded"
-        >
-          <option value="">Select product</option>
-          {products.map((p) => (
-            <option key={p._id} value={p._id}>
-              {p.name || p.title}
-            </option>
-          ))}
-        </select>
-      );
-    }
-
-    if (type === "NONE") {
-      return (
-        <p className="text-sm text-gray-500">
-          Banner will not link to category or product
-        </p>
-      );
-    }
-  };
-
-  /* =========================
-     UI
-  ========================= */
-
-  return (
-    <div className="p-6">
-      <h2 className="text-lg font-semibold mb-4">Add Banner</h2>
-
-      <form onSubmit={handleSubmit} className="space-y-4 h-[56vh] overflow-y-auto ">
-        {/* TITLE */}
-        <input
-          type="text"
-          name="title"
-          placeholder="Banner Title"
-          value={formData.title}
-          onChange={handleChange}
-          className="w-full border px-3 py-2 rounded"
-        />
-
-        {/* TYPE */}
-        <select
-          value={type}
-          onChange={handleTypeChange}
-          className="w-full border px-3 py-2 rounded"
-        >
-          <option value="CATEGORY">Category</option>
-          <option value="PRODUCT">Product</option>
-          <option value="NONE">None</option>
-        </select>
-
-        {renderActionSelect()}
-
-        {/* IMAGE */}
-        <input type="file" multiple accept="image/*" onChange={handleImageChange} />
-
-        {/* PREVIEW */}
-        <div className="flex gap-2 flex-wrap">
-          {imagePreviews.map((img, i) => (
-            <div key={i} className="relative">
-              <img src={img} alt="" className="w-20 h-20 object-cover rounded" />
-              <button
-                type="button"
-                onClick={() => removeImage(i)}
-                className="absolute top-0 right-0 bg-red-500 text-white px-1 rounded"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {/* TARGET URL */}
         <input
           type="url"
           name="targetUrl"
-          placeholder="Target URL"
-          value={formData.targetUrl}
+          placeholder="https://example.com/promo"
+          value={form.targetUrl}
           onChange={handleChange}
-          className="w-full border px-3 py-2 rounded"
+          className={inputClass}
         />
+      );
+    }
 
-        {/* DESCRIPTION */}
-        <textarea
-          name="description"
-          placeholder="Description"
-          value={formData.description}
-          onChange={handleChange}
-          className="w-full border px-3 py-2 rounded"
-        />
+    if (form.actionType === "NONE") {
+      return (
+        <p className="rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-500 ring-1 ring-slate-200">
+          This banner will only display in the app and will not open any destination.
+        </p>
+      );
+    }
 
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="px-4 py-2 border rounded"
-          >
-            Cancel
-          </button>
+    return (
+      <select
+        name="actionId"
+        value={form.actionId}
+        onChange={handleChange}
+        className={inputClass}
+      >
+        <option value="">
+          Select {form.actionType === "CATEGORY" ? "category" : "product"}
+        </option>
+        {actionTargets.map((item) => (
+          <option key={item._id} value={item._id}>
+            {item.name || item.title || "Untitled"}
+          </option>
+        ))}
+      </select>
+    );
+  };
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
-          >
-            {isSubmitting ? "Creating..." : "Create Banner"}
-          </button>
+  if (loading) {
+    return (
+      <div className="flex min-h-[360px] items-center justify-center text-sm text-slate-500">
+        Loading banner references...
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6">
+      <div className="mb-5">
+        <h2 className="text-xl font-semibold text-slate-900">Create storefront banner</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Upload a banner, choose where it should open, and control when it appears in
+          the app.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="space-y-5">
+          <section className="rounded-3xl border border-slate-200 bg-white p-5">
+            <h3 className="mb-4 text-lg font-semibold text-slate-900">Content</h3>
+            <div className="space-y-4">
+              <input
+                type="text"
+                name="title"
+                placeholder="Summer kitchen essentials"
+                value={form.title}
+                onChange={handleChange}
+                className={inputClass}
+              />
+              <input
+                type="text"
+                name="subtitle"
+                placeholder="Bulk deals for restaurants"
+                value={form.subtitle}
+                onChange={handleChange}
+                className={inputClass}
+              />
+              <textarea
+                name="description"
+                placeholder="Optional banner supporting copy"
+                value={form.description}
+                onChange={handleChange}
+                className={`${inputClass} min-h-28`}
+              />
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-5">
+            <h3 className="mb-4 text-lg font-semibold text-slate-900">CTA and schedule</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <select
+                  name="actionType"
+                  value={form.actionType}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+                  {actionOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="md:col-span-2">{renderActionField()}</div>
+
+              <input
+                type="number"
+                min="0"
+                name="displayOrder"
+                value={form.displayOrder}
+                onChange={handleChange}
+                className={inputClass}
+                placeholder="Display priority"
+              />
+
+              <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  name="isActive"
+                  checked={form.isActive}
+                  onChange={handleChange}
+                />
+                Active banner
+              </label>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Starts at
+                </label>
+                <input
+                  type="datetime-local"
+                  name="startsAt"
+                  value={form.startsAt}
+                  onChange={handleChange}
+                  className={inputClass}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Ends at
+                </label>
+                <input
+                  type="datetime-local"
+                  name="endsAt"
+                  value={form.endsAt}
+                  onChange={handleChange}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div className="space-y-5">
+          <section className="rounded-3xl border border-slate-200 bg-white p-5">
+            <h3 className="mb-4 text-lg font-semibold text-slate-900">Media</h3>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleImageChange}
+              className={`${inputClass} file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-emerald-700`}
+            />
+            <p className="mt-2 text-xs text-slate-400">
+              Upload up to 5 images. The first one becomes the banner cover in the app.
+            </p>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {imagePreviews.map((preview, index) => (
+                <div key={preview} className="relative overflow-hidden rounded-2xl border border-slate-200">
+                  <img src={preview} alt="" className="h-28 w-full object-cover" />
+                  {index === 0 && (
+                    <span className="absolute left-2 top-2 rounded-full bg-slate-950 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+                      Cover
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-1 text-xs font-semibold text-rose-600"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onBack}
+              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700"
+            >
+              Back
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-emerald-300"
+            >
+              {isSubmitting ? "Creating..." : "Create banner"}
+            </button>
+          </div>
         </div>
       </form>
     </div>

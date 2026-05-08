@@ -14,8 +14,14 @@ const BannerList = () => {
   const [editingBanner, setEditingBanner] = useState(null);
   const [editFormData, setEditFormData] = useState({
     title: '',
+    subtitle: '',
+    description: '',
     actionType: 'CATEGORY',
     actionId: '',
+    targetUrl: '',
+    displayOrder: '0',
+    startsAt: '',
+    endsAt: '',
     isActive: true,
   });
   const [formErrors, setFormErrors] = useState({});
@@ -37,12 +43,12 @@ const BannerList = () => {
       setError('');
       const res = await BannersList();
       
-      if (res?.success) {
-        const bannersData = res?.banners || [];
+      if (res?.ok) {
+        const bannersData = res?.data?.banners || [];
         setBanners(Array.isArray(bannersData) ? bannersData : []);
       } else {
-        setError('Failed to load banners');
-        toast.error("Failed to load banners");
+        setError(res?.message || 'Failed to load banners');
+        toast.error(res?.message || "Failed to load banners");
       }
     } catch (err) {
       setError('Error loading banners');
@@ -91,9 +97,16 @@ const BannerList = () => {
     setEditingBanner(banner);
     setEditFormData({
       title: banner.title || '',
+      subtitle: banner.subtitle || '',
+      description: banner.description || '',
       actionType: banner.actionType || 'CATEGORY',
-      actionId: banner.actionId || '',
-      isActive: banner.isActive || true,
+      actionId:
+        typeof banner.actionId === 'object' ? banner.actionId?._id || '' : banner.actionId || '',
+      targetUrl: banner.targetUrl || '',
+      displayOrder: String(banner.displayOrder ?? 0),
+      startsAt: banner.startsAt ? new Date(banner.startsAt).toISOString().slice(0, 16) : '',
+      endsAt: banner.endsAt ? new Date(banner.endsAt).toISOString().slice(0, 16) : '',
+      isActive: banner.isActive ?? true,
     });
     setExistingImages(banner.images || []);
     setSelectedImages([]);
@@ -105,12 +118,18 @@ const BannerList = () => {
   const handleCloseModal = () => {
     setShowEditModal(false);
     setEditingBanner(null);
-    setEditFormData({
-      title: '',
-      actionType: 'CATEGORY',
-      actionId: '',
-      isActive: true,
-    });
+      setEditFormData({
+        title: '',
+        subtitle: '',
+        description: '',
+        actionType: 'CATEGORY',
+        actionId: '',
+        targetUrl: '',
+        displayOrder: '0',
+        startsAt: '',
+        endsAt: '',
+        isActive: true,
+      });
     setSelectedImages([]);
     setImagePreviews([]);
     setExistingImages([]);
@@ -127,10 +146,22 @@ const BannerList = () => {
     }
     
     // Validate actionId based on actionType
-    if (editFormData.actionType !== 'None') {
+    if (editFormData.actionType !== 'NONE' && editFormData.actionType !== 'URL') {
       if (!editFormData.actionId) {
         errors.actionId = `${editFormData.actionType === 'CATEGORY' ? 'Category' : 'Product'} selection is required`;
       }
+    }
+
+    if (editFormData.actionType === 'URL' && !/^https?:\/\//i.test(editFormData.targetUrl.trim())) {
+      errors.targetUrl = 'Target URL must start with http:// or https://';
+    }
+
+    if (
+      editFormData.startsAt &&
+      editFormData.endsAt &&
+      editFormData.startsAt > editFormData.endsAt
+    ) {
+      errors.endsAt = 'End time must be after start time';
     }
     
     // Validate images
@@ -248,12 +279,31 @@ const BannerList = () => {
       
       // Append all form fields
       formData.append('title', editFormData.title.trim());
+      formData.append('subtitle', editFormData.subtitle.trim());
+      formData.append('description', editFormData.description.trim());
       formData.append('actionType', editFormData.actionType);
       formData.append('isActive', editFormData.isActive.toString());
+      formData.append('displayOrder', editFormData.displayOrder || '0');
       
       // Only append actionId if type is not 'None' and it exists
-      if (editFormData.actionType !== 'None' && editFormData.actionId) {
+      if (
+        editFormData.actionType !== 'NONE' &&
+        editFormData.actionType !== 'URL' &&
+        editFormData.actionId
+      ) {
         formData.append('actionId', editFormData.actionId);
+      }
+
+      if (editFormData.actionType === 'URL' && editFormData.targetUrl.trim()) {
+        formData.append('targetUrl', editFormData.targetUrl.trim());
+      }
+
+      if (editFormData.startsAt) {
+        formData.append('startsAt', new Date(editFormData.startsAt).toISOString());
+      }
+
+      if (editFormData.endsAt) {
+        formData.append('endsAt', new Date(editFormData.endsAt).toISOString());
       }
 
       // Append all new images
@@ -312,6 +362,8 @@ const BannerList = () => {
     switch (actionType) {
       case 'CATEGORY': return 'Category';
       case 'PRODUCT': return 'Product';
+      case 'URL': return 'URL';
+      case 'NONE': return 'No action';
       default: return actionType;
     }
   };
@@ -320,6 +372,7 @@ const BannerList = () => {
     switch (actionType) {
       case 'CATEGORY': return 'bg-blue-100 text-blue-800';
       case 'PRODUCT': return 'bg-purple-100 text-purple-800';
+      case 'URL': return 'bg-amber-100 text-amber-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -347,7 +400,8 @@ const BannerList = () => {
   const isSubmitDisabled = () => {
     return isSubmitting || 
            !editFormData.title.trim() || 
-           (editFormData.actionType !== 'None' && !editFormData.actionId) ||
+           ((editFormData.actionType !== 'NONE' && editFormData.actionType !== 'URL' && !editFormData.actionId) ||
+           (editFormData.actionType === 'URL' && !editFormData.targetUrl.trim())) ||
            (existingImages.length === 0 && selectedImages.length === 0);
   };
 
@@ -357,7 +411,8 @@ const BannerList = () => {
     
     const errors = [];
     if (!editFormData.title.trim()) errors.push('title');
-    if (editFormData.actionType !== 'None' && !editFormData.actionId) errors.push('action selection');
+    if (editFormData.actionType !== 'NONE' && editFormData.actionType !== 'URL' && !editFormData.actionId) errors.push('action selection');
+    if (editFormData.actionType === 'URL' && !editFormData.targetUrl.trim()) errors.push('target URL');
     if (existingImages.length === 0 && selectedImages.length === 0) errors.push('at least one image');
     
     if (errors.length > 0) {
@@ -484,6 +539,9 @@ const BannerList = () => {
                     {/* Details */}
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900">{banner.title}</div>
+                      {banner.subtitle && (
+                        <div className="mt-1 text-xs text-gray-600">{banner.subtitle}</div>
+                      )}
                       <div className="text-xs text-gray-500 mt-1">ID: {banner._id.substring(0, 8)}...</div>
                       <div className="text-xs text-gray-500">
                         Created: {formatDate(banner.createdAt)} by {banner.createdBy?.username || 'Unknown'}
@@ -491,6 +549,14 @@ const BannerList = () => {
                       <div className="text-xs text-gray-500 mt-1">
                         Updated: {formatDate(banner.updatedAt)}
                       </div>
+                      <div className="mt-1 text-xs text-gray-500">
+                        Order: {banner.displayOrder ?? 0}
+                      </div>
+                      {(banner.startsAt || banner.endsAt) && (
+                        <div className="mt-1 text-xs text-gray-500">
+                          Window: {banner.startsAt ? formatDate(banner.startsAt) : 'Now'} to {banner.endsAt ? formatDate(banner.endsAt) : 'No end'}
+                        </div>
+                      )}
                     </td>
 
                     {/* Action Info */}
@@ -501,11 +567,32 @@ const BannerList = () => {
                         </span>
                       </div>
                       <div className="text-xs text-gray-600">
-                        Ref: {banner.actionRef || 'N/A'}
+                        Ref: {banner.actionRef || banner.actionType || 'N/A'}
                       </div>
                       <div className="text-xs text-gray-500">
-                        ID: {banner.actionId ? banner.actionId.substring(0, 8) + '...' : 'N/A'}
+                        {banner.actionType === 'URL'
+                          ? `URL: ${banner.targetUrl || 'N/A'}`
+                          : `ID: ${
+                              banner.actionTarget?.id?.substring?.(0, 8) ||
+                              (typeof banner.actionId === 'string'
+                                ? banner.actionId.substring(0, 8)
+                                : 'N/A')
+                            }${
+                              banner.actionTarget?.id || typeof banner.actionId === 'string'
+                                ? '...'
+                                : ''
+                            }`}
                       </div>
+                      {banner.actionTarget?.name && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Target: {banner.actionTarget.name}
+                        </div>
+                      )}
+                      {banner.actionType === 'PRODUCT' && banner.actionTarget?.categoryName && (
+                        <div className="text-xs text-gray-500">
+                          Category: {banner.actionTarget.categoryName}
+                        </div>
+                      )}
                     </td>
 
                     {/* Status */}
@@ -608,6 +695,34 @@ const BannerList = () => {
                     )}
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Subtitle
+                    </label>
+                    <input
+                      type="text"
+                      name="subtitle"
+                      value={editFormData.subtitle}
+                      onChange={handleEditChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Optional supporting line"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      name="description"
+                      value={editFormData.description}
+                      onChange={handleEditChange}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Optional banner description"
+                    />
+                  </div>
+
                   {/* Action Type */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -621,12 +736,13 @@ const BannerList = () => {
                     >
                       <option value="CATEGORY">Category</option>
                       <option value="PRODUCT">Product</option>
-                      <option value="None">None</option>
+                      <option value="URL">URL</option>
+                      <option value="NONE">None</option>
                     </select>
                   </div>
 
                   {/* Action ID Selection */}
-                  {editFormData.actionType !== 'None' && (
+                  {editFormData.actionType !== 'NONE' && editFormData.actionType !== 'URL' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         {editFormData.actionType === 'CATEGORY' ? 'Select Category *' : 'Select Product *'}
@@ -636,7 +752,7 @@ const BannerList = () => {
                         value={editFormData.actionId}
                         onChange={handleEditChange}
                         className={`w-full px-3 py-2 border ${formErrors.actionId ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                        required={editFormData.actionType !== 'None'}
+                        required={editFormData.actionType !== 'NONE'}
                       >
                         <option value="">
                           Select {editFormData.actionType === 'CATEGORY' ? 'a category' : 'a product'}
@@ -656,23 +772,89 @@ const BannerList = () => {
                     </div>
                   )}
 
-                  {/* Status */}
-                  {/* <div className="flex items-center p-3 bg-gray-50 rounded-md">
-                    <input
-                      type="checkbox"
-                      name="isActive"
-                      id="editIsActive"
-                      checked={editFormData.isActive}
-                      onChange={handleEditChange}
-                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <label htmlFor="editIsActive" className="ml-2 block text-sm text-gray-700">
-                      Active Banner
-                    </label>
-                    <span className="ml-auto text-xs text-gray-500">
-                      {editFormData.isActive ? 'Will be visible to users' : 'Hidden from users'}
-                    </span>
-                  </div> */}
+                  {editFormData.actionType === 'URL' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Target URL *
+                      </label>
+                      <input
+                        type="url"
+                        name="targetUrl"
+                        value={editFormData.targetUrl}
+                        onChange={handleEditChange}
+                        className={`w-full px-3 py-2 border ${formErrors.targetUrl ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                        placeholder="https://example.com/promo"
+                      />
+                      {formErrors.targetUrl && (
+                        <p className="mt-1 text-xs text-red-600 flex items-center">
+                          <AlertCircle className="w-3 h-3 mr-1" />
+                          {formErrors.targetUrl}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Display order
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        name="displayOrder"
+                        value={editFormData.displayOrder}
+                        onChange={handleEditChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="flex items-center p-3 bg-gray-50 rounded-md">
+                      <input
+                        type="checkbox"
+                        name="isActive"
+                        id="editIsActive"
+                        checked={editFormData.isActive}
+                        onChange={handleEditChange}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor="editIsActive" className="ml-2 block text-sm text-gray-700">
+                        Active banner
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Starts at
+                      </label>
+                      <input
+                        type="datetime-local"
+                        name="startsAt"
+                        value={editFormData.startsAt}
+                        onChange={handleEditChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Ends at
+                      </label>
+                      <input
+                        type="datetime-local"
+                        name="endsAt"
+                        value={editFormData.endsAt}
+                        onChange={handleEditChange}
+                        className={`w-full px-3 py-2 border ${formErrors.endsAt ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                      />
+                      {formErrors.endsAt && (
+                        <p className="mt-1 text-xs text-red-600 flex items-center">
+                          <AlertCircle className="w-3 h-3 mr-1" />
+                          {formErrors.endsAt}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Right Column - Images */}
@@ -809,7 +991,7 @@ const BannerList = () => {
                   </div>
 
                   {/* Validation Summary */}
-                  {(formErrors.title || formErrors.actionId || formErrors.images) && (
+                  {(formErrors.title || formErrors.actionId || formErrors.targetUrl || formErrors.endsAt || formErrors.images) && (
                     <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                       <div className="text-sm font-medium text-red-800 mb-2 flex items-center">
                         <AlertCircle className="w-4 h-4 mr-2" />
@@ -818,6 +1000,8 @@ const BannerList = () => {
                       <ul className="text-xs text-red-600 space-y-1">
                         {formErrors.title && <li>• {formErrors.title}</li>}
                         {formErrors.actionId && <li>• {formErrors.actionId}</li>}
+                        {formErrors.targetUrl && <li>• {formErrors.targetUrl}</li>}
+                        {formErrors.endsAt && <li>• {formErrors.endsAt}</li>}
                         {formErrors.images && <li>• {formErrors.images}</li>}
                       </ul>
                     </div>

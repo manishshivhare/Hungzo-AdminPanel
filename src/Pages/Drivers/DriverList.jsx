@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { DriverApproved as getApprovedDrivers } from "../../Api";
-import { User, CheckCircle, Search, Download, Eye, Phone, Car, Bike, X, MapPin, IdCard, Calendar, Activity, Truck, FileText, Mail, Award, Clock, Navigation, ShieldCheck, Wifi, Maximize2, MoveUpRightIcon, } from "lucide-react";
+import { DriverApproved as getApprovedDrivers, fetchDriverReviewsAdmin } from "../../Api";
+import { User, CheckCircle, Search, Download, Eye, Phone, Car, Bike, X, MapPin, IdCard, Calendar, Activity, Truck, FileText, Mail, Award, Clock, Navigation, ShieldCheck, Wifi, Maximize2, MoveUpRightIcon, Star } from "lucide-react";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../Context/AuthProvider";
@@ -11,11 +11,8 @@ const DriverList = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedDriver, setSelectedDriver] = useState(null);
-  const [stats, setStats] = useState({
-    total: 0,
-    online: 0,
-    active: 0
-  });
+  const [selectedDriverReviews, setSelectedDriverReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   /* ================= FETCH ================= */
   const fetchDrivers = async () => {
@@ -23,12 +20,6 @@ const DriverList = () => {
       const res = await getApprovedDrivers();
       setDrivers(res || []);
       setFilteredDrivers(res || []);
-
-      // Calculate stats
-      const total = res?.length || 0;
-      const online = res?.filter(d => d.isOnline).length || 0;
-      const active = res?.filter(d => d.isActive).length || 0;
-      setStats({ total, online, active });
 
     } catch {
       toast.error("Failed to load approved drivers");
@@ -71,6 +62,19 @@ const DriverList = () => {
       toast.error("Driver phone number not available");
     }
   }
+
+  const openDriverDetails = async (driver) => {
+    setSelectedDriver(driver);
+    setSelectedDriverReviews([]);
+    setReviewsLoading(true);
+    const response = await fetchDriverReviewsAdmin(driver._id);
+    if (response?.ok) {
+      setSelectedDriverReviews(response.data?.reviews || []);
+    } else {
+      toast.error(response?.message || "Failed to load driver ratings");
+    }
+    setReviewsLoading(false);
+  };
 
 
   if (loading) {
@@ -122,6 +126,7 @@ const DriverList = () => {
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Driver</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Vehicle</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rating</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
@@ -145,7 +150,7 @@ const DriverList = () => {
                   <tr
                     key={driver._id}
                     className="hover:bg-green-50/50 transition-colors cursor-pointer"
-                    onClick={() => setSelectedDriver(driver)}
+                    onClick={() => openDriverDetails(driver)}
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -190,6 +195,15 @@ const DriverList = () => {
                         </div>
                       </div>
                     </td>
+                    <td className="px-6 py-4">
+                      <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
+                        <Star className="w-4 h-4" />
+                        {Number(driver.ratingAverage ?? 0).toFixed(1)}
+                        <span className="text-xs text-slate-500">
+                          ({driver.ratingCount ?? 0})
+                        </span>
+                      </div>
+                    </td>
 
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
@@ -203,7 +217,7 @@ const DriverList = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedDriver(driver);
+                            openDriverDetails(driver);
                           }}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                           title="View driver details"
@@ -241,6 +255,8 @@ const DriverList = () => {
       {selectedDriver && (
         <DriverDetailsModal
           driver={selectedDriver}
+          reviews={selectedDriverReviews}
+          reviewsLoading={reviewsLoading}
           onClose={() => setSelectedDriver(null)}
           onContact={handleContact}
         />
@@ -250,7 +266,7 @@ const DriverList = () => {
 };
 
 /* ================= MODAL COMPONENT ================= */
-const DriverDetailsModal = ({ driver, onClose, onContact }) => {
+const DriverDetailsModal = ({ driver, reviews, reviewsLoading, onClose, onContact }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const { logout  } = useAuth();
   return (
@@ -367,6 +383,10 @@ const DriverDetailsModal = ({ driver, onClose, onContact }) => {
                       Active
                     </span>
                   )}
+                  <span className="flex items-center gap-1 text-sm bg-amber-100 text-amber-700 px-3 py-1 rounded-full">
+                    <Star className="w-4 h-4" />
+                    {Number(driver.ratingAverage ?? 0).toFixed(1)} avg
+                  </span>
                 </div>
               </div>
             </div>
@@ -489,6 +509,56 @@ const DriverDetailsModal = ({ driver, onClose, onContact }) => {
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <h4 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  <Star className="w-5 h-5 text-amber-500" />
+                  Customer Ratings
+                </h4>
+                <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700">
+                  <Star className="w-4 h-4" />
+                  {Number(driver.ratingAverage ?? 0).toFixed(1)} avg from {driver.ratingCount ?? 0}
+                </div>
+              </div>
+
+              {reviewsLoading ? (
+                <div className="rounded-xl bg-gray-50 px-4 py-6 text-sm text-gray-500">
+                  Loading recent ratings...
+                </div>
+              ) : reviews.length === 0 ? (
+                <div className="rounded-xl bg-gray-50 px-4 py-6 text-sm text-gray-500">
+                  No customer ratings available for this driver yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {reviews.map((review) => (
+                    <div
+                      key={review._id}
+                      className="rounded-xl border border-gray-100 bg-gray-50 p-4"
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <div className="text-sm font-semibold text-gray-900">
+                          {review.reviewerNameRaw || review.reviewerName || "Customer"}
+                        </div>
+                        <div className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                          <Star className="w-3.5 h-3.5" />
+                          {Number(review.rating ?? 0).toFixed(1)}
+                        </div>
+                      </div>
+                      <p className="text-sm leading-6 text-gray-600">
+                        {review.comment?.trim() || "No written feedback provided."}
+                      </p>
+                      <p className="mt-2 text-xs text-gray-400">
+                        {review.createdAt
+                          ? new Date(review.createdAt).toLocaleString("en-IN")
+                          : "Recently added"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Documents Section */}

@@ -16,6 +16,7 @@ const buildDefaultWeeklyHours = () =>
   DAY_LABELS.map((day, index) => ({
     day: day.key,
     isOpen: index !== 6,
+    isTwentyFourHours: false,
     openTime: "09:00",
     closeTime: "21:00",
   }));
@@ -61,7 +62,10 @@ export default function BusinessHours() {
       timezone: response.settings?.timezone || "Asia/Kolkata",
       weeklyHours:
         response.settings?.weeklyHours?.length > 0
-          ? response.settings.weeklyHours
+          ? response.settings.weeklyHours.map((entry) => ({
+              ...entry,
+              isTwentyFourHours: Boolean(entry?.isTwentyFourHours),
+            }))
           : buildDefaultWeeklyHours(),
       temporaryClosure: {
         isClosed: Boolean(response.settings?.temporaryClosure?.isClosed),
@@ -77,6 +81,21 @@ export default function BusinessHours() {
       ...current,
       weeklyHours: current.weeklyHours.map((entry) =>
         entry.day === day ? { ...entry, ...patch } : entry
+      ),
+    }));
+  }
+
+  function toggleTwentyFourHours(day, enabled) {
+    setForm((current) => ({
+      ...current,
+      weeklyHours: current.weeklyHours.map((entry) =>
+        entry.day === day
+          ? {
+              ...entry,
+              isOpen: enabled ? true : entry.isOpen,
+              isTwentyFourHours: enabled,
+            }
+          : entry
       ),
     }));
   }
@@ -150,12 +169,16 @@ export default function BusinessHours() {
                 return (
                   <div
                     key={entry.day}
-                    className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[1fr_auto_auto_auto]"
+                    className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[1fr_auto_auto_auto_auto]"
                   >
                     <div>
                       <p className="text-base font-semibold text-slate-900">{day?.label || entry.day}</p>
                       <p className="text-sm text-slate-500">
-                        {entry.isOpen ? "Store accepts orders on this day." : "Store remains closed for the full day."}
+                        {entry.isOpen
+                          ? entry.isTwentyFourHours
+                            ? "Store stays open for the full day."
+                            : "Store accepts orders on this day."
+                          : "Store remains closed for the full day."}
                       </p>
                     </div>
 
@@ -164,19 +187,38 @@ export default function BusinessHours() {
                         type="checkbox"
                         checked={entry.isOpen}
                         onChange={(event) =>
-                          updateDay(entry.day, { isOpen: event.target.checked })
+                          updateDay(entry.day, {
+                            isOpen: event.target.checked,
+                            isTwentyFourHours: event.target.checked
+                              ? entry.isTwentyFourHours
+                              : false,
+                          })
                         }
                         className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                       />
                       Open
                     </label>
 
+                    <button
+                      type="button"
+                      onClick={() =>
+                        toggleTwentyFourHours(entry.day, !entry.isTwentyFourHours)
+                      }
+                      className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                        entry.isTwentyFourHours
+                          ? "border-emerald-600 bg-emerald-600 text-white"
+                          : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      24x7
+                    </button>
+
                     <label className="flex flex-col gap-1 text-sm font-medium text-slate-700">
                       Opening time
                       <input
                         type="time"
                         value={entry.openTime}
-                        disabled={!entry.isOpen}
+                        disabled={!entry.isOpen || entry.isTwentyFourHours}
                         onChange={(event) =>
                           updateDay(entry.day, { openTime: event.target.value })
                         }
@@ -189,7 +231,7 @@ export default function BusinessHours() {
                       <input
                         type="time"
                         value={entry.closeTime}
-                        disabled={!entry.isOpen}
+                        disabled={!entry.isOpen || entry.isTwentyFourHours}
                         onChange={(event) =>
                           updateDay(entry.day, { closeTime: event.target.value })
                         }

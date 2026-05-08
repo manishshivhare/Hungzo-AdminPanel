@@ -14,6 +14,7 @@ import AddAdminPage from './Pages/Admin/AddAdminPage'
 import AdminListPage from './Pages/Admin/AdminListPage'
 import ProductsList from './Pages/Product/ProductsList'
 import AddProduct from './Pages/Product/AddProduct'
+import CategoryManagement from './Pages/Product/CategoryManagement'
 import Banner from './Pages/Banner/Banner'
 import RestaurantsWallet from './Pages/Wallet/RestaurantsWallet'
 import WalletsDetails from './Pages/Wallet/WalletsDetails'
@@ -24,6 +25,11 @@ import DriverOrder from './Pages/Drivers/DriverOrder'
 import Warehouse from './Pages/Warehouse/Warehouse'
 import UserOrders from './Pages/Orders/UserOrders'
 import BusinessHours from './Pages/BusinessHours/BusinessHours'
+import WalletOffers from './Pages/Offers/WalletOffers'
+import LegalDetails from './Pages/LegalDetails/LegalDetails'
+import BuyerGST from './Pages/BuyerGST/BuyerGST'
+import DeletionRequests from './Pages/Users/DeletionRequests'
+import AppConfiguration from './Pages/AppConfiguration/AppConfiguration'
 
 export default function App() {
   const location = useLocation()
@@ -58,17 +64,25 @@ export default function App() {
             <Route path="/orders/user/:userId" element={<ProtectedRoute><UserOrders /></ProtectedRoute>} />
             <Route path="/logout" element={<ProtectedRoute><LogoutPage /></ProtectedRoute>} />
             <Route path="/notification" element={<ProtectedRoute><Notification /></ProtectedRoute>} />
-            <Route path="/restaurants" element={<ProtectedRoute><Restaurant/></ProtectedRoute>} />
+            <Route path="/restaurants" element={<Navigate to="/users/profiles" replace />} />
+            <Route path="/users/profiles" element={<ProtectedRoute><Restaurant/></ProtectedRoute>} />
+            <Route path="/users/buyer-gst" element={<ProtectedRoute><BuyerGST /></ProtectedRoute>} />
+            <Route path="/users/deletion-requests" element={<ProtectedRoute><DeletionRequests /></ProtectedRoute>} />
             <Route path="/verification" element={<ProtectedRoute><Verifications /></ProtectedRoute>} />
             <Route path="/suppliers" element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
             <Route path="/drivers" element={<ProtectedRoute><Driver /></ProtectedRoute>} />
             <Route path="/add-admin" element={<ProtectedRoute><AddAdminPage /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AdminListPage /></ProtectedRoute>} />
-            <Route path='/product' element={<ProtectedRoute><ProductsList /></ProtectedRoute>} />
-            <Route path='/add-product' element={<ProtectedRoute><AddProduct /></ProtectedRoute>} />
+            <Route path='/product' element={<Navigate to="/product/inventory" replace />} />
+            <Route path='/product/inventory' element={<ProtectedRoute><ProductsList /></ProtectedRoute>} />
+            <Route path='/product/add' element={<ProtectedRoute><AddProduct /></ProtectedRoute>} />
+            <Route path='/product/categories' element={<ProtectedRoute><CategoryManagement /></ProtectedRoute>} />
             <Route path='/banner' element={<ProtectedRoute><Banner /></ProtectedRoute>} />
             <Route path='/warehouse' element={<ProtectedRoute><Warehouse /></ProtectedRoute>} />
             <Route path='/business-hours' element={<ProtectedRoute><BusinessHours /></ProtectedRoute>} />
+            <Route path='/app-configuration' element={<ProtectedRoute><AppConfiguration /></ProtectedRoute>} />
+            <Route path='/legal-details' element={<ProtectedRoute><LegalDetails /></ProtectedRoute>} />
+            <Route path='/offers/wallet' element={<ProtectedRoute><WalletOffers /></ProtectedRoute>} />
             <Route path='/driver-orders/:driverId' element={<DriverOrder />} />
 
             {/* 404 */}
