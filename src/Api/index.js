@@ -1,8 +1,8 @@
 import axios from "axios";
 
 // const API_BASE = "https://api.hungzo.in";
-// const API_BASE = "http://192.168.0.196:4000";
-const API_BASE = "https://hungzo-backend.onrender.com";
+const API_BASE = "http://10.248.31.138:4000";
+// const API_BASE = "https://hungzo-backend.onrender.com";
 
 
 const API = axios.create({
