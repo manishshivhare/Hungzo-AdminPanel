@@ -1,8 +1,8 @@
 import axios from "axios";
 
 // const API_BASE = "https://api.hungzo.in";
-// const API_BASE = "http://192.168.0.196:4000";
-const API_BASE = "https://hungzo-backend.onrender.com";
+const API_BASE = "http://192.168.0.196:4000";
+// const API_BASE = "https://hungzo-backend.onrender.com";
 
 
 const API = axios.create({
@@ -172,6 +172,34 @@ export async function updateStoreSettings(payload) {
       success: false,
       message:
         error.response?.data?.message || "Failed to update store settings",
+    };
+  }
+}
+
+export async function getPolicyDocuments() {
+  try {
+    const res = await API.get("/admin/policies");
+    return res.data;
+  } catch (error) {
+    return {
+      ok: false,
+      success: false,
+      message:
+        error.response?.data?.message || "Failed to fetch policy documents",
+    };
+  }
+}
+
+export async function updatePolicyDocuments(policies) {
+  try {
+    const res = await API.put("/admin/policies", { policies });
+    return res.data;
+  } catch (error) {
+    return {
+      ok: false,
+      success: false,
+      message:
+        error.response?.data?.message || "Failed to update policy documents",
     };
   }
 }

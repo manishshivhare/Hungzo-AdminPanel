@@ -30,6 +30,7 @@ import LegalDetails from './Pages/LegalDetails/LegalDetails'
 import BuyerGST from './Pages/BuyerGST/BuyerGST'
 import DeletionRequests from './Pages/Users/DeletionRequests'
 import AppConfiguration from './Pages/AppConfiguration/AppConfiguration'
+import Policies from './Pages/Policies/Policies'
 
 export default function App() {
   const location = useLocation()
@@ -81,6 +82,7 @@ export default function App() {
             <Route path='/warehouse' element={<ProtectedRoute><Warehouse /></ProtectedRoute>} />
             <Route path='/business-hours' element={<ProtectedRoute><BusinessHours /></ProtectedRoute>} />
             <Route path='/app-configuration' element={<ProtectedRoute><AppConfiguration /></ProtectedRoute>} />
+            <Route path='/policies' element={<ProtectedRoute><Policies /></ProtectedRoute>} />
             <Route path='/legal-details' element={<ProtectedRoute><LegalDetails /></ProtectedRoute>} />
             <Route path='/offers/wallet' element={<ProtectedRoute><WalletOffers /></ProtectedRoute>} />
             <Route path='/driver-orders/:driverId' element={<DriverOrder />} />

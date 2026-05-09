@@ -48,6 +48,7 @@ const adminMenu = [
   { to: "/warehouse", label: "Warehouse", icon: BuildingStorefrontIcon },
   { to: "/business-hours", label: "Business Hours", icon: ClockIcon },
   { to: "/app-configuration", label: "App Configuration", icon: Cog6ToothIcon },
+  { to: "/policies", label: "Policies", icon: DocumentTextIcon },
   { to: "/legal-details", label: "Legal Details", icon: DocumentTextIcon },
   { to: "/notification", label: "notification", icon: BellAlertIcon },
   {
@@ -91,6 +92,7 @@ const superAdminMenu = [
   { to: "/warehouse", label: "Warehouse", icon: BuildingStorefrontIcon },
   { to: "/business-hours", label: "Business Hours", icon: ClockIcon },
   { to: "/app-configuration", label: "App Configuration", icon: Cog6ToothIcon },
+  { to: "/policies", label: "Policies", icon: DocumentTextIcon },
   { to: "/legal-details", label: "Legal Details", icon: DocumentTextIcon },
   { to: "/notification", label: "notification", icon: BellAlertIcon },
   { to: "/walletDetails", label: "Wallet", icon: Wallet },
