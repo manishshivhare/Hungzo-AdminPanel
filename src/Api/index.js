@@ -836,6 +836,18 @@ export async function assignWarehouseToOrder(orderId, warehouseId) {
   }
 }
 
+export async function verifyPickupOtp(orderId, otp) {
+  try {
+    const res = await API.post(`/orders/pickup-verify/${orderId}`, { otp });
+    return { ok: true, data: res.data };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error.response?.data?.message || "Failed to verify pickup OTP",
+    };
+  }
+}
+
 
 /* ================= GET SINGLE ORDER ================= */
 export async function getOrderById(orderId) {
@@ -846,6 +858,37 @@ export async function getOrderById(orderId) {
     return {
       ok: false,
       message: error.response?.data?.message || "Failed to fetch order",
+    };
+  }
+}
+
+export async function downloadOrderInvoice(orderId) {
+  try {
+    const res = await API.get(`/orders/${orderId}/invoice`, {
+      responseType: "blob",
+    });
+    return {
+      ok: true,
+      blob: res.data,
+      contentDisposition: res.headers["content-disposition"] || "",
+    };
+  } catch (error) {
+    let message = "Failed to download invoice";
+    if (error.response?.data instanceof Blob) {
+      try {
+        const text = await error.response.data.text();
+        const parsed = JSON.parse(text);
+        message = parsed?.message || message;
+      } catch (_) {
+        // Keep fallback message.
+      }
+    } else {
+      message = error.response?.data?.message || message;
+    }
+
+    return {
+      ok: false,
+      message,
     };
   }
 }

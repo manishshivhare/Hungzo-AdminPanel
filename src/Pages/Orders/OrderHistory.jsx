@@ -4,8 +4,8 @@ import {
   approveOrderRefund,
   getAllOrders,
   getAdminOrders,
+  downloadOrderInvoice as downloadOrderInvoiceAPI,
 } from "../../Api";
-import { generateInvoice } from "./generateInvoice";
 import toast from "react-hot-toast";
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
@@ -264,13 +264,18 @@ const OrderHistory = ({ mode = "all" }) => {
 
   const mapOrder = (o) => {
     const refundMeta = deriveRefundMeta(o);
+    const customerName =
+      o.userDetails?.name ||
+      o.user?.restaurantId?.name ||
+      o.user?.name ||
+      "—";
 
     return ({
     id: o._id,
     items: o.items
       .map((i) => `${i.productName} (${i.varietyName}) × ${i.quantity}`)
       .join(", "),
-    customerName: o.user?.restaurantId?.name || o.user?.name || "—",
+    customerName,
     email: o.userDetails?.email || o.user?.email || "—",
     phone: o.userDetails?.phone || o.user?.phone || o.shippingAddress?.phone || "—",
     status:
@@ -480,11 +485,26 @@ const OrderHistory = ({ mode = "all" }) => {
   const handleDownloadInvoice = async (order) => {
     try {
       setInvoiceLoading(true);
-      await generateInvoice(order.raw);
+      const res = await downloadOrderInvoiceAPI(order.id);
+      if (!res.ok) {
+        throw new Error(res.message || "Failed to download invoice");
+      }
+
+      const blobUrl = window.URL.createObjectURL(res.blob);
+      const anchor = document.createElement("a");
+      const match = /filename=\"?([^\"]+)\"?/i.exec(
+        res.contentDisposition || ""
+      );
+      anchor.href = blobUrl;
+      anchor.download = match?.[1] || `invoice-${order.id}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(blobUrl);
       toast.success("Invoice downloaded successfully!");
     } catch (error) {
       console.error("Failed to generate invoice:", error);
-      toast.error("Failed to generate invoice");
+      toast.error(error.message || "Failed to download invoice");
     } finally {
       setInvoiceLoading(false);
     }

@@ -4,10 +4,11 @@ import {
   getAdminOrders,
   updateOrderStatus as updateOrderStatusAPI,
   assignWarehouseToOrder as assignWarehouseToOrderAPI,
+  verifyPickupOtp as verifyPickupOtpAPI,
   getWarehouses,
+  downloadOrderInvoice as downloadOrderInvoiceAPI,
 } from "../../Api";
 import toast from "react-hot-toast";
-import { generateInvoice } from "./generateInvoice";
 import { useAuth } from "../../Context/AuthProvider";
 
 /* ================= UTILS ================= */
@@ -40,7 +41,6 @@ const SELF_PICKUP_ORDER_STATUS_OPTIONS = [
   "Pending",
   "Accepted",
   "Packed",
-  "Picked by Customer",
 ];
 
 const getOrderStatusOptions = (order) =>
@@ -105,6 +105,8 @@ const LiveOrderTable = () => {
   const [warehouses, setWarehouses] = useState([]);
   const [warehouseDrafts, setWarehouseDrafts] = useState({});
   const [assigningWarehouseId, setAssigningWarehouseId] = useState(null);
+  const [pickupOtpDrafts, setPickupOtpDrafts] = useState({});
+  const [verifyingPickupOrderId, setVerifyingPickupOrderId] = useState(null);
   // console.log(orders);
 
   /* 🔔 notification state */
@@ -141,6 +143,13 @@ const LiveOrderTable = () => {
         fetchedOrders.forEach((order) => {
           next[order._id] =
             next[order._id] || order.warehouseAssignment?.warehouseId || "";
+        });
+        return next;
+      });
+      setPickupOtpDrafts((prev) => {
+        const next = { ...prev };
+        fetchedOrders.forEach((order) => {
+          next[order._id] = next[order._id] || "";
         });
         return next;
       });
@@ -240,11 +249,22 @@ const LiveOrderTable = () => {
 
   /* ================= PRINT INVOICE ================= */
   const handlePrintInvoice = (order) => {
-    try {
-      generateInvoice(order);
-    } catch {
-      toast.error("Failed to generate invoice");
-    }
+    downloadOrderInvoiceAPI(order._id).then((res) => {
+      if (!res.ok) {
+        toast.error(res.message || "Failed to download invoice");
+        return;
+      }
+
+      const blobUrl = window.URL.createObjectURL(res.blob);
+      const anchor = document.createElement("a");
+      const match = /filename="?([^"]+)"?/i.exec(res.contentDisposition || "");
+      anchor.href = blobUrl;
+      anchor.download = match?.[1] || `invoice-${order._id}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    });
   };
 
   const assignWarehouse = async (orderId) => {
@@ -273,6 +293,43 @@ const LiveOrderTable = () => {
       toast.success("Warehouse assigned successfully");
     } finally {
       setAssigningWarehouseId(null);
+    }
+  };
+
+  const verifyPickupOtp = async (orderId) => {
+    const otp = (pickupOtpDrafts[orderId] || "").trim();
+    if (!otp) {
+      toast.error("Enter the pickup OTP first");
+      return;
+    }
+
+    try {
+      setVerifyingPickupOrderId(orderId);
+      const res = await verifyPickupOtpAPI(orderId, otp);
+
+      if (!res.ok) {
+        toast.error(res.message || "Failed to verify pickup OTP");
+        return;
+      }
+
+      const updatedOrder = res.data?.order;
+      setOrders((prev) =>
+        prev.map((order) => (order._id === orderId ? updatedOrder : order))
+      );
+      setSelectedOrder((current) =>
+        current?._id === orderId ? updatedOrder : current
+      );
+      setPickupOtpDrafts((prev) => ({
+        ...prev,
+        [orderId]: "",
+      }));
+      setStatusDrafts((prev) => ({
+        ...prev,
+        [orderId]: updatedOrder?.orderStatus || "Picked by Customer",
+      }));
+      toast.success("Pickup OTP verified successfully");
+    } finally {
+      setVerifyingPickupOrderId(null);
     }
   };
 
@@ -354,6 +411,12 @@ const LiveOrderTable = () => {
                   statusDrafts[order._id] ?? order.orderStatus;
                 const availableStatusOptions = getOrderStatusOptions(order);
                 const disableUpdate = selectedStatus === order.orderStatus;
+                const showPickupVerification =
+                  order.fulfillmentType === "SELF_PICKUP" &&
+                  order.warehouseAssignment &&
+                  order.pickupOtpGeneratedAt &&
+                  !order.pickupOtpVerifiedAt &&
+                  order.orderStatus !== "Cancelled";
 
                 return (
                   <tr
@@ -415,6 +478,37 @@ const LiveOrderTable = () => {
                           <div className="text-[11px] text-gray-500">
                             {order.warehouseAssignment?.name || "Not assigned"}
                           </div>
+                          {showPickupVerification ? (
+                            <div className="space-y-1 pt-1">
+                              <input
+                                type="text"
+                                value={pickupOtpDrafts[order._id] ?? ""}
+                                onChange={(e) =>
+                                  setPickupOtpDrafts((prev) => ({
+                                    ...prev,
+                                    [order._id]: e.target.value
+                                      .replace(/\D/g, "")
+                                      .slice(0, 4),
+                                  }))
+                                }
+                                placeholder="Enter OTP"
+                                className="block w-full rounded border border-gray-300 px-2 py-1 text-xs"
+                              />
+                              <button
+                                onClick={() => verifyPickupOtp(order._id)}
+                                disabled={verifyingPickupOrderId === order._id}
+                                className={`block w-full rounded py-1 text-xs text-white ${
+                                  verifyingPickupOrderId === order._id
+                                    ? "cursor-not-allowed bg-gray-300"
+                                    : "bg-indigo-600 hover:bg-indigo-700"
+                                }`}
+                              >
+                                {verifyingPickupOrderId === order._id
+                                  ? "Verifying..."
+                                  : "Verify OTP"}
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
                       ) : (
                         <span className="text-xs text-gray-400">—</span>
@@ -492,17 +586,17 @@ const OrderDetailsModal = ({
   onPrintInvoice,
 }) => (
   <div
-    className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+    className="fixed inset-0 z-50 bg-black/70 p-3 sm:p-4"
     onClick={onClose}
   >
     <div
-      className="bg-white/90 w-full max-w-4xl rounded-lg shadow-lg overflow-hidden"
+      className="mx-auto flex h-full max-h-[calc(100vh-24px)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:max-h-[calc(100vh-32px)]"
       onClick={(e) => e.stopPropagation()}
     >
       {/* HEADER */}
-      <div className="flex justify-between items-center p-4 border-b">
+      <div className="flex items-start justify-between gap-3 border-b px-4 py-4 sm:px-5">
         <div>
-          <h2 className="font-bold text-lg">
+          <h2 className="font-bold text-lg sm:text-xl">
             Order #{order._id.substring(0, 8)}
           </h2>
           <p className="text-xs text-gray-500">
@@ -510,146 +604,163 @@ const OrderDetailsModal = ({
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <button
             onClick={() => onPrintInvoice(order)}
-            className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+            className="rounded bg-blue-600 px-3 py-2 text-sm text-white"
           >
-            Print Invoice
+            Download Invoice
           </button>
-          <button onClick={onClose}>✕</button>
+          <button
+            onClick={onClose}
+            className="rounded px-2 py-1 text-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+          >
+            ✕
+          </button>
         </div>
       </div>
 
-      {/* CUSTOMER + ORDER INFO */}
-      <div className="p-4 grid grid-cols-2 gap-4 text-sm border-b">
-        <div className="space-y-1">
-          <p>
+      <div className="flex-1 overflow-y-auto">
+        {/* CUSTOMER + ORDER INFO */}
+        <div className="grid grid-cols-1 gap-4 border-b p-4 text-sm sm:grid-cols-2 sm:p-5">
+          <div className="space-y-2 rounded-xl bg-slate-50 p-4">
+            <p className="break-words">
             <strong>Status:</strong> {order.orderStatus}
-          </p>
-          <p>
+            </p>
+            <p className="break-words">
             <strong>Payment:</strong> {order.paymentMethod} (
             {order.paymentStatus})
-          </p>
-          <p>
-            <strong>Razorpay ID:</strong> {order.razorpayOrderId}
-          </p>
-        </div>
+            </p>
+            <p className="break-words">
+              <strong>Razorpay ID:</strong> {order.razorpayOrderId || "N/A"}
+            </p>
+          </div>
 
-        <div className="space-y-1">
-          <p>
+          <div className="space-y-2 rounded-xl bg-slate-50 p-4">
+            <p className="break-words">
             <strong>Customer:</strong>{" "}
-            {order.user?.restaurantId?.ownerName || "******"}
-          </p>
-          <p>
-            <strong>Restaurant Name:</strong>{" "}
-            {console.log(order)
-            }
-            {order.user?.restaurantId?.name || "******"}
-          </p>
-          <p>
+            {order.userDetails?.name ||
+              order.user?.restaurantId?.ownerName ||
+              order.user?.name ||
+              "******"}
+            </p>
+            <p className="break-words">
+              <strong>Restaurant Name:</strong>{" "}
+              {order.user?.restaurantId?.name || "N/A"}
+            </p>
+            <p className="break-words">
             <strong>Customer Num.:</strong>{" "}
             {order.userDetails?.phone || "N/A"}
-          </p>
-          <p>
+            </p>
+            <p className="break-words">
             <strong>Address:</strong> {order.shippingAddress}
-          </p>
-          {order.fulfillmentType === "SELF_PICKUP" ? (
-            <p>
-              <strong>Assigned Warehouse:</strong>{" "}
-              {order.warehouseAssignment?.name || "Not assigned"}
             </p>
-          ) : null}
-        </div>
-      </div>
-
-      {order.fulfillmentType === "SELF_PICKUP" && order.warehouseAssignment ? (
-        <div className="border-b p-4">
-          <h3 className="mb-3 font-semibold">Self Pickup Warehouse</h3>
-          <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
-            <p>
-              <strong>Name:</strong> {order.warehouseAssignment.name}
-            </p>
-            <p>
-              <strong>Address:</strong> {order.warehouseAssignment.fullAddress}
-            </p>
-            {order.warehouseAssignment.mapLink ? (
-              <a
-                href={order.warehouseAssignment.mapLink}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-1 inline-block text-blue-600 hover:text-blue-700"
-              >
-                Open Google Maps Link
-              </a>
+            {order.fulfillmentType === "SELF_PICKUP" ? (
+              <p className="break-words">
+                <strong>Assigned Warehouse:</strong>{" "}
+                {order.warehouseAssignment?.name || "Not assigned"}
+              </p>
+            ) : null}
+            {order.fulfillmentType === "SELF_PICKUP" &&
+            order.pickupOtpGeneratedAt &&
+            !order.pickupOtpVerifiedAt ? (
+              <p className="break-words">
+                <strong>Pickup OTP:</strong> Awaiting admin verification
+              </p>
             ) : null}
           </div>
         </div>
-      ) : null}
 
-      {/* ITEMS */}
-      <div className="p-3 border-b">
-        <h3 className="font-semibold mb-3">Order Items</h3>
-
-        <div className="space-y-1 h-43 overflow-y-auto">
-          {order.items.map((item) => (
-            <div
-              key={item._id}
-              className="flex gap-4 border rounded-lg p-3"
-            >
-              {/* IMAGE */}
-              <img
-                src={item.product?.images?.[0]}
-                alt={item.productName}
-                className="w-20 h-20 object-cover rounded border"
-              />
-
-              {/* DETAILS */}
-              <div className="flex-1 text-sm space-y-1">
-                <p className="font-semibold text-base">
-                  {item.productName}
+        {order.fulfillmentType === "SELF_PICKUP" && order.warehouseAssignment ? (
+          <div className="border-b p-4 sm:p-5">
+            <h3 className="mb-3 font-semibold">Self Pickup Warehouse</h3>
+            <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
+              <p className="break-words">
+                <strong>Name:</strong> {order.warehouseAssignment.name}
+              </p>
+              <p className="break-words">
+                <strong>Address:</strong> {order.warehouseAssignment.fullAddress}
+              </p>
+              {order.pickupOtpGeneratedAt ? (
+                <p className="break-words">
+                  <strong>Pickup OTP:</strong>{" "}
+                  {order.pickupOtpVerifiedAt ? "Verified" : "Pending verification"}
                 </p>
-                <p className="text-gray-500">
-                  Variety: {item.varietyName}
-                </p>
-                <p className="text-gray-500">
-                  Price: ₹{item.price}
-                </p>
-                <p className="text-gray-500">
-                  Quantity: {item.quantity}
-                </p>
-              </div>
-
-              <div className="font-semibold text-right">
-                ₹{item.total}
-              </div>
+              ) : null}
+              {order.warehouseAssignment.mapLink ? (
+                <a
+                  href={order.warehouseAssignment.mapLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-block text-blue-600 hover:text-blue-700"
+                >
+                  Open Google Maps Link
+                </a>
+              ) : null}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+        ) : null}
 
-      {/* BILL SUMMARY */}
-      <div className="p-4 text-sm space-y-1">
-        <div className="flex justify-between">
-          <span>Subtotal</span>
-          <span>₹{order.subTotal}</span>
-        </div>
-           <div className="flex justify-between">
-          <span>PlatformFee</span>
-          <span>₹{order.platformFee}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>GST</span>
-          <span>₹{order.gstAmount}</span>
-        </div>
-        <div className="flex justify-between">
-          <span>Delivery</span>
-          <span>₹{order.deliveryCharge}</span>
+        {/* ITEMS */}
+        <div className="border-b p-4 sm:p-5">
+          <h3 className="mb-3 font-semibold">Order Items</h3>
+
+          <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+            {order.items.map((item) => (
+              <div
+                key={item._id}
+                className="flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-start sm:gap-4"
+              >
+                <img
+                  src={item.product?.images?.[0]}
+                  alt={item.productName}
+                  className="h-20 w-20 rounded border object-cover"
+                />
+
+                <div className="flex-1 space-y-1 text-sm">
+                  <p className="text-base font-semibold break-words">
+                    {item.productName}
+                  </p>
+                  <p className="break-words text-gray-500">
+                    Variety: {item.varietyName}
+                  </p>
+                  <p className="text-gray-500">Price: ₹{item.price}</p>
+                  <p className="text-gray-500">Quantity: {item.quantity}</p>
+                </div>
+
+                <div className="text-right font-semibold sm:min-w-20">
+                  ₹{item.total}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
-          <span>Total</span>
-          <span>₹{order.totalAmount}</span>
+        {/* BILL SUMMARY */}
+        <div className="p-4 text-sm sm:p-5">
+          <div className="space-y-2 rounded-xl bg-slate-50 p-4">
+            <div className="flex justify-between gap-4">
+              <span>Subtotal</span>
+              <span>₹{order.subTotal}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span>Platform Fee</span>
+              <span>₹{order.platformFee}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span>GST</span>
+              <span>₹{order.gstAmount}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span>Delivery</span>
+              <span>₹{order.deliveryCharge}</span>
+            </div>
+
+            <div className="mt-2 flex justify-between gap-4 border-t pt-3 text-base font-bold">
+              <span>Total</span>
+              <span>₹{order.totalAmount}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
